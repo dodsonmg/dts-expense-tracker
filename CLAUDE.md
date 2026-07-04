@@ -30,13 +30,16 @@ There is no test runner or linter configured yet.
 
 - `src/types.ts` — domain types + the fixed `CATEGORIES` list/order, plus
   `isUsdPending`. Single source of truth for the data model.
-- `src/db.ts` — IndexedDB load/save for expenses and M&IE segments.
+- `src/db.ts` — IndexedDB load/save for expenses, M&IE segments, and DTS-expected
+  totals.
 - `src/useTripData.ts` — the one stateful hook: loads once, mirrors state to
-  IndexedDB, exposes add/update/delete for expenses and segments. `App` owns it
-  and passes slices down; components are otherwise presentational.
+  IndexedDB, exposes add/update/delete for expenses and segments plus
+  `setDtsExpected`. `App` owns it and passes slices down; components are
+  otherwise presentational.
 - `src/lib/` — pure functions, no React:
   - `mie.ts` — M&IE per-diem math.
   - `totals.ts` — by-category and by-account totals.
+  - `reconcile.ts` — compares app category totals against DTS-entered totals.
   - `csv.ts` — export document.
   - `format.ts` — currency + date helpers.
 - `src/components/` — one file per screen: `EntryForm`, `ExpenseList`,
@@ -62,6 +65,12 @@ There is no test runner or linter configured yet.
    to `false`; legacy rows without the field are normalized to `false` on load
    (`db.ts`). Read it via `isEntered` (defensive against `undefined`). Surfaced
    as a per-row toggle, a "not entered only" list filter, and a CSV column.
+8. **DTS reconciliation compares per currency, at cent precision.** `DtsExpected`
+   holds the totals the user reads off DTS (per category, per currency; null =
+   unchecked). `reconcileCategories` compares each currency against its own app
+   total only — GBP-to-GBP, USD-to-USD, never crossed — and treats sub-half-cent
+   gaps as a match (float noise), anything larger as a mismatch. It's input, not
+   truth: it never alters the computed totals.
 
 ## Export contract
 
