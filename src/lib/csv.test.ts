@@ -93,6 +93,58 @@ describe('buildCsv', () => {
   });
 });
 
+const line = (csv: string, prefix: string) =>
+  csv.split('\r\n').find((l) => l.startsWith(prefix))!;
+
+describe('buildCsv — DTS comparison columns', () => {
+  it('adds dts_usd/delta_usd/status headers to both totals blocks', () => {
+    const csv = buildCsv([], []);
+    const headers = csv
+      .split('\r\n')
+      .filter((l) => l.startsWith('category,') || l.startsWith('account,'));
+    expect(headers).toEqual([
+      'category,gbp,usd,dts_usd,delta_usd,status',
+      'account,gbp,usd,dts_usd,delta_usd,status',
+    ]);
+  });
+
+  it('flags a category mismatch as MISMATCH with a signed delta', () => {
+    const csv = buildCsv(
+      [exp({ category: 'LODGING', amount_usd: 100 })],
+      [],
+      { LODGING: 90 },
+    );
+    // category,gbp,usd,dts_usd,delta_usd,status
+    expect(line(csv, 'LODGING,')).toBe('LODGING,0.00,100.00,90.00,10.00,MISMATCH');
+  });
+
+  it('marks a matching category ok and leaves an unchecked one blank', () => {
+    const matched = buildCsv(
+      [exp({ category: 'LODGING', amount_usd: 100 })],
+      [],
+      { LODGING: 100 },
+    );
+    expect(line(matched, 'LODGING,')).toBe('LODGING,0.00,100.00,100.00,0.00,ok');
+
+    const unchecked = buildCsv([exp({ category: 'LODGING', amount_usd: 100 })], []);
+    expect(line(unchecked, 'LODGING,')).toBe('LODGING,0.00,100.00,,,');
+  });
+
+  it('reconciles the GTCC/Personal reimbursement in the account block', () => {
+    const csv = buildCsv(
+      [
+        exp({ category: 'LODGING', payment: 'GTCC', amount_usd: 500 }),
+        exp({ id: 'b', category: 'TRANSPORT', payment: 'personal', amount_usd: 200 }),
+      ],
+      [],
+      {},
+      { gtcc: 480, personal: 200 },
+    );
+    expect(line(csv, 'GTCC,')).toBe('GTCC,0.00,500.00,480.00,20.00,MISMATCH');
+    expect(line(csv, 'Personal,')).toBe('Personal,0.00,200.00,200.00,0.00,ok');
+  });
+});
+
 describe('csvFilename', () => {
   it('is dated YYYY-MM-DD', () => {
     expect(csvFilename(new Date('2026-07-04T12:00:00Z'))).toBe(

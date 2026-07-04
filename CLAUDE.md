@@ -78,9 +78,11 @@ There is no test runner or linter configured yet.
 
 `buildCsv` emits one file: `EXPENSES` rows (with `usd_pending` and
 `entered_in_dts` flag columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
-then `TOTALS BY ACCOUNT`. Money cells are plain 2-dp numbers (or blank) — no
-currency glyphs — because the office workstation reconciles the emailed sheet
-numerically against DTS. The export must stay
+then `TOTALS BY ACCOUNT`. The two totals blocks carry the DTS comparison
+(`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) so
+the emailed sheet works as the office's reconciliation view. Money cells are
+plain 2-dp numbers (or blank) — no currency glyphs — because the office
+workstation reconciles the sheet numerically against DTS. The export must stay
 usable as a standalone spreadsheet (it's the reconciliation view at the office,
 where phones are banned).
 
