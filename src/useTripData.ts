@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Currency, DtsExpected, Expense, MieSegment } from './types';
-import type { Category } from './types';
+import type {
+  Account,
+  Category,
+  DtsAccountExpected,
+  DtsExpected,
+  Expense,
+  MieSegment,
+} from './types';
 import {
+  loadDtsAccountExpected,
   loadDtsExpected,
   loadExpenses,
   loadSegments,
+  saveDtsAccountExpected,
   saveDtsExpected,
   saveExpenses,
   saveSegments,
@@ -21,21 +29,27 @@ export function useTripData() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [segments, setSegments] = useState<MieSegment[]>([]);
   const [dtsExpected, setDtsExpectedState] = useState<DtsExpected>({});
+  const [dtsAccountExpected, setDtsAccountExpectedState] =
+    useState<DtsAccountExpected>({ gtcc: null, personal: null });
   const [loaded, setLoaded] = useState(false);
   const ready = useRef(false);
 
   useEffect(() => {
     let alive = true;
-    void Promise.all([loadExpenses(), loadSegments(), loadDtsExpected()]).then(
-      ([e, s, d]) => {
-        if (!alive) return;
-        setExpenses(e);
-        setSegments(s);
-        setDtsExpectedState(d);
-        ready.current = true;
-        setLoaded(true);
-      },
-    );
+    void Promise.all([
+      loadExpenses(),
+      loadSegments(),
+      loadDtsExpected(),
+      loadDtsAccountExpected(),
+    ]).then(([e, s, d, a]) => {
+      if (!alive) return;
+      setExpenses(e);
+      setSegments(s);
+      setDtsExpectedState(d);
+      setDtsAccountExpectedState(a);
+      ready.current = true;
+      setLoaded(true);
+    });
     return () => {
       alive = false;
     };
@@ -52,6 +66,10 @@ export function useTripData() {
   useEffect(() => {
     if (ready.current) void saveDtsExpected(dtsExpected);
   }, [dtsExpected]);
+
+  useEffect(() => {
+    if (ready.current) void saveDtsAccountExpected(dtsAccountExpected);
+  }, [dtsAccountExpected]);
 
   const addExpense = useCallback((data: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...data, id: newId() }, ...prev]);
@@ -84,14 +102,18 @@ export function useTripData() {
     setSegments((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
-  // Set one DTS-expected total (a single category/currency cell). null clears it.
+  // Set one DTS-expected category total (USD). null clears it.
   const setDtsExpected = useCallback(
-    (category: Category, currency: Currency, value: number | null) => {
-      const key = currency === 'GBP' ? 'gbp' : 'usd';
-      setDtsExpectedState((prev) => {
-        const cur = prev[category] ?? { gbp: null, usd: null };
-        return { ...prev, [category]: { ...cur, [key]: value } };
-      });
+    (category: Category, value: number | null) => {
+      setDtsExpectedState((prev) => ({ ...prev, [category]: value }));
+    },
+    [],
+  );
+
+  // Set one DTS-expected account reimbursement total (USD). null clears it.
+  const setDtsAccountExpected = useCallback(
+    (account: Account, value: number | null) => {
+      setDtsAccountExpectedState((prev) => ({ ...prev, [account]: value }));
     },
     [],
   );
@@ -101,6 +123,7 @@ export function useTripData() {
     expenses,
     segments,
     dtsExpected,
+    dtsAccountExpected,
     addExpense,
     updateExpense,
     deleteExpense,
@@ -108,6 +131,7 @@ export function useTripData() {
     updateSegment,
     deleteSegment,
     setDtsExpected,
+    setDtsAccountExpected,
   };
 }
 

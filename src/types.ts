@@ -33,16 +33,15 @@ export interface Expense {
   entered: boolean; // reconciliation: has this been keyed into DTS yet?
 }
 
-// Totals the user reads off DTS, to reconcile against the app's computed
-// category totals. Per category, per currency; null = not checked yet. GBP and
-// USD are compared independently and never summed.
-export interface DtsCategoryExpected {
-  gbp: number | null;
-  usd: number | null;
-}
+// DTS reports USD only, so reconciliation is USD-only throughout.
+// Per-category total the user reads off DTS (absent/null = not checked yet).
+export type DtsExpected = Partial<Record<Category, number | null>>;
 
-// Only categories the user has entered a DTS figure for are present.
-export type DtsExpected = Partial<Record<Category, DtsCategoryExpected>>;
+// Account buckets used for the split-reimbursement reconciliation.
+export type Account = 'gtcc' | 'personal';
+
+// Reimbursement totals DTS shows per account (USD).
+export type DtsAccountExpected = Record<Account, number | null>;
 
 // A single location segment of the M&IE per-diem calculation. USD only.
 export interface MieSegment {

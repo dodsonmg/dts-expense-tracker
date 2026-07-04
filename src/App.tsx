@@ -49,7 +49,9 @@ export default function App() {
             expenses={trip.expenses}
             segments={trip.segments}
             expected={trip.dtsExpected}
+            accountExpected={trip.dtsAccountExpected}
             onSetDts={trip.setDtsExpected}
+            onSetAccountDts={trip.setDtsAccountExpected}
           />
         ) : (
           <ExportView expenses={trip.expenses} segments={trip.segments} />

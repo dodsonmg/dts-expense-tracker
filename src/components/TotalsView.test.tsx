@@ -4,8 +4,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TotalsView } from './TotalsView';
 import type {
+  Account,
   Category,
-  Currency,
+  DtsAccountExpected,
   DtsExpected,
   Expense,
   MieSegment,
@@ -32,25 +33,26 @@ function Harness({
   segments?: MieSegment[];
 }) {
   const [expected, setExpected] = useState<DtsExpected>({});
-  const onSetDts = (c: Category, cur: Currency, v: number | null) => {
-    const key = cur === 'GBP' ? 'gbp' : 'usd';
-    setExpected((prev) => ({
-      ...prev,
-      [c]: { ...(prev[c] ?? { gbp: null, usd: null }), [key]: v },
-    }));
-  };
+  const [accountExpected, setAccountExpected] = useState<DtsAccountExpected>({
+    gtcc: null,
+    personal: null,
+  });
   return (
     <TotalsView
       expenses={expenses}
       segments={segments}
       expected={expected}
-      onSetDts={onSetDts}
+      accountExpected={accountExpected}
+      onSetDts={(c: Category, v) => setExpected((p) => ({ ...p, [c]: v }))}
+      onSetAccountDts={(a: Account, v) =>
+        setAccountExpected((p) => ({ ...p, [a]: v }))
+      }
     />
   );
 }
 
 describe('TotalsView — DTS reconciliation', () => {
-  it('flags a mismatch and clears it when the value matches', async () => {
+  it('flags a category mismatch and clears it when the value matches', async () => {
     const user = userEvent.setup();
     render(<Harness expenses={[exp({ category: 'LODGING', amount_usd: 100 })]} />);
 
@@ -64,34 +66,52 @@ describe('TotalsView — DTS reconciliation', () => {
     expect(screen.getByLabelText('matches DTS')).toBeInTheDocument();
   });
 
-  it('checks GBP and USD independently for one category', async () => {
+  it('reconciles the GTCC/Personal reimbursement independently', async () => {
     const user = userEvent.setup();
     render(
       <Harness
-        expenses={[exp({ category: 'LODGING', amount_gbp: 80, amount_usd: 100 })]}
+        expenses={[
+          exp({ category: 'LODGING', payment: 'GTCC', amount_usd: 500 }),
+          exp({ category: 'TRANSPORT', payment: 'personal', amount_usd: 200 }),
+        ]}
       />,
     );
 
-    await user.type(screen.getByLabelText('DTS GBP total for LODGING'), '80');
-    await user.type(screen.getByLabelText('DTS USD total for LODGING'), '90');
+    await user.type(
+      screen.getByLabelText('DTS USD reimbursement for GTCC'),
+      '480',
+    );
+    await user.type(
+      screen.getByLabelText('DTS USD reimbursement for Personal'),
+      '200',
+    );
 
-    expect(screen.getByLabelText('matches DTS')).toBeInTheDocument(); // GBP
-    expect(screen.getByText('+$10.00')).toBeInTheDocument(); // USD app 100 − dts 90
+    expect(screen.getByText('+$20.00')).toBeInTheDocument(); // GTCC 500 − 480
+    expect(screen.getByLabelText('matches DTS')).toBeInTheDocument(); // Personal
   });
 
-  it('calls the setter with category, currency and parsed value', async () => {
+  it('calls the setters with the parsed value', async () => {
     const user = userEvent.setup();
     const onSetDts = vi.fn();
+    const onSetAccountDts = vi.fn();
     render(
       <TotalsView
         expenses={[]}
         segments={[]}
         expected={{}}
+        accountExpected={{ gtcc: null, personal: null }}
         onSetDts={onSetDts}
+        onSetAccountDts={onSetAccountDts}
       />,
     );
 
     await user.type(screen.getByLabelText('DTS USD total for LODGING'), '5');
-    expect(onSetDts).toHaveBeenLastCalledWith('LODGING', 'USD', 5);
+    expect(onSetDts).toHaveBeenLastCalledWith('LODGING', 5);
+
+    await user.type(
+      screen.getByLabelText('DTS USD reimbursement for GTCC'),
+      '7',
+    );
+    expect(onSetAccountDts).toHaveBeenLastCalledWith('gtcc', 7);
   });
 });
