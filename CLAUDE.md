@@ -61,7 +61,12 @@ There is no test runner or linter configured yet.
 3. **Category set is fixed, in fixed order.** Itemized entry excludes `M&IE`
    (`ITEMIZED_CATEGORIES`); totals still show the `M&IE` row.
 4. **"USD pending"** = has a GBP amount but no USD amount (charge hasn't landed
-   on the card yet). Surfaced as a list filter and a CSV flag.
+   on the card yet). Surfaced as a list filter and a CSV flag. A category/account
+   total fed by any USD-pending expense is **"USD incomplete"** — the DTS
+   comparison for that row is premature. This is distinct from (and takes visual
+   precedence over) a **mismatch**: an incomplete total isn't a reliable signal
+   yet, mismatch or not. See `usdPendingCountsByCategory`/`...ByAccount`
+   (`totals.ts`), `ReportCategoryRow.usdPendingCount`/`ReportAccountRow.usdPendingCount`.
 5. **Amounts are optional** but an expense needs at least one of GBP/USD to save.
 6. **Date defaults to today, freely editable** (e.g. foreign-transaction fees
    are dated to the purchase day even though they post later).
@@ -83,14 +88,16 @@ There is no test runner or linter configured yet.
 `buildCsv` emits one file: `EXPENSES` rows (with `usd_pending` and
 `entered_in_dts` flag columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
 then `TOTALS BY ACCOUNT`. The two totals blocks carry the DTS comparison
-(`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) so
-the emailed sheet works as the office's reconciliation view. Money cells are
-plain 2-dp numbers (or blank) — no currency glyphs — because the office
-workstation reconciles the sheet numerically against DTS.
+(`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) and
+a `usd_incomplete` (`yes`/blank) flag, so the emailed sheet works as the
+office's reconciliation view. Money cells are plain 2-dp numbers (or blank) —
+no currency glyphs — because the office workstation reconciles the sheet
+numerically against DTS.
 
 The formatted `.xlsx` (`buildXlsx`, ExcelJS) renders from the same `report.ts`
 model: a **Reconcile** sheet with the by-category and by-account tables at the
-top (mismatch rows highlighted), then **Expenses** (raw rows) and **M&IE**
+top (mismatch rows red, USD-incomplete rows yellow — incomplete wins when
+both apply), then **Expenses** (raw rows, USD-pending rows yellow) and **M&IE**
 sheets. Both exporters must render from `buildReport` so they never diverge.
 ExcelJS is dynamically imported; keep it out of any statically-loaded module. The export must stay
 usable as a standalone spreadsheet (it's the reconciliation view at the office,

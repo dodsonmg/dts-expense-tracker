@@ -4,6 +4,7 @@ import {
   type Expense,
   type MieSegment,
 } from '../types';
+import { isUsdPending } from '../types';
 import { mieTotalUsd } from './mie';
 
 // A GBP/USD pair. The two currencies are NEVER summed together (SPEC.md):
@@ -64,4 +65,35 @@ export function totalsByAccount(
   personal.usd += mieTotalUsd(segments);
 
   return { gtcc, personal };
+}
+
+// Count of expenses missing USD (`isUsdPending`) feeding each category/account.
+// A category/account's USD total is "incomplete" whenever this is nonzero —
+// the DTS comparison for that row is premature. M&IE is computed and USD-only,
+// so it's never pending.
+export function usdPendingCountsByCategory(
+  expenses: Expense[],
+): Map<Category, number> {
+  const counts = new Map<Category, number>(CATEGORIES.map((c) => [c, 0]));
+  for (const e of expenses) {
+    if (isUsdPending(e)) counts.set(e.category, (counts.get(e.category) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export interface AccountPendingCounts {
+  gtcc: number;
+  personal: number;
+}
+
+export function usdPendingCountsByAccount(
+  expenses: Expense[],
+): AccountPendingCounts {
+  const counts: AccountPendingCounts = { gtcc: 0, personal: 0 };
+  for (const e of expenses) {
+    if (!isUsdPending(e)) continue;
+    if (e.payment === 'GTCC') counts.gtcc++;
+    else counts.personal++;
+  }
+  return counts;
 }

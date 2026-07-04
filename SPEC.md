@@ -137,6 +137,11 @@ Two tables, GBP and USD kept separate throughout:
 >   intent is realized as USD-to-USD checks; it also covers **account**
 >   reimbursement, not just categories.
 > - Item 7 uses **ExcelJS**, not SheetJS (see Tech stack).
+> - A category/account total whose USD is fed by a **USD-pending** expense is
+>   flagged **incomplete** (yellow), distinct from a **mismatch** (red) — the
+>   DTS comparison is premature while data's still missing. Surfaced on the
+>   Totals tab, the `.xlsx` (Reconcile + Expenses sheets), and the CSV
+>   (`usd_incomplete` column).
 
 **Phase 2 — reconciliation**
 5. Check off each item as "entered in DTS."

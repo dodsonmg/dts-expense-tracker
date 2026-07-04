@@ -32,7 +32,7 @@ function findRow(
   let found: (string | number | null)[] | undefined;
   ws.eachRow((row) => {
     if (row.getCell(1).value === firstCell) {
-      found = [1, 2, 3, 4, 5, 6].map(
+      found = [1, 2, 3, 4, 5, 6, 7, 8].map(
         (i) => row.getCell(i).value as string | number | null,
       );
     }
@@ -87,5 +87,34 @@ describe('buildXlsx', () => {
     expect(raw?.[1]).toBe('LODGING');
     expect(raw?.[2]).toBe(80); // GBP
     expect(raw?.[3]).toBe(100); // USD
+  });
+
+  it('flags a USD-incomplete category/account row and the pending expense row', async () => {
+    const buf = await buildXlsx(
+      [
+        exp({
+          category: 'LODGING',
+          payment: 'GTCC',
+          amount_gbp: 80,
+          amount_usd: null, // USD pending
+        }),
+      ],
+      [],
+      { LODGING: 0 },
+      { gtcc: 0, personal: null },
+    );
+    const wb = await readBack(buf);
+
+    // Reconcile sheet: label, GBP, USD, DTS, Δ, status, USD Incomplete
+    // (0-indexed array of 1-indexed columns, so found[i] = column i+1)
+    const lodging = findRow(wb, 'Reconcile', 'LODGING');
+    expect(lodging?.[2]).toBe(0); // USD app total is still 0, missing USD
+    expect(lodging?.[6]).toBe('yes'); // USD Incomplete (column 7)
+    const gtcc = findRow(wb, 'Reconcile', 'GTCC');
+    expect(gtcc?.[6]).toBe('yes');
+
+    // Expenses sheet: USD pending column (column 6) is flagged
+    const raw = findRow(wb, 'Expenses', '2026-07-01');
+    expect(raw?.[5]).toBe('yes');
   });
 });

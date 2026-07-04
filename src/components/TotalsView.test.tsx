@@ -115,3 +115,35 @@ describe('TotalsView — DTS reconciliation', () => {
     expect(onSetAccountDts).toHaveBeenLastCalledWith('gtcc', 7);
   });
 });
+
+describe('TotalsView — USD-incomplete warning', () => {
+  it('flags a category and account row fed by a USD-pending expense', () => {
+    render(
+      <Harness
+        expenses={[
+          exp({
+            category: 'LODGING',
+            payment: 'GTCC',
+            amount_gbp: 80,
+            amount_usd: null,
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByText('1 missing USD')).toHaveLength(2); // LODGING + GTCC rows
+    expect(screen.getAllByText('1 row with missing USD')).toHaveLength(2); // per-section summary
+
+  });
+
+  it('does not flag rows once USD is filled in', () => {
+    render(
+      <Harness
+        expenses={[
+          exp({ category: 'LODGING', amount_gbp: 80, amount_usd: 100 }),
+        ]}
+      />,
+    );
+    expect(screen.queryByText(/missing USD/)).toBeNull();
+  });
+});

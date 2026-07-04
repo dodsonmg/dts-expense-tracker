@@ -8,6 +8,7 @@
   --accent: #5dbcd2;
   --accent-ink: #10222a;
   --danger: #e06666;
+  --warn: #e0b866;
   --gtcc: #7cc4d6;
 
   color-scheme: dark;
@@ -409,6 +410,10 @@ h2 {
   border-radius: 5px;
   padding: 0.02rem 0.3rem;
 }
+.tag--warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
 
 /* ---- Reconciliation (Totals: by category + by account) ---- */
 .recon {
@@ -421,6 +426,9 @@ h2 {
   color: var(--danger);
   font-size: 0.82rem;
   font-weight: 600;
+}
+.recon__summary--warn {
+  color: var(--warn);
 }
 /* One row: name | app USD | DTS input | flag. */
 .recon__row {
@@ -456,6 +464,11 @@ h2 {
 .recon__row--mismatch .recon__input {
   border-color: var(--danger);
 }
+/* USD-pending data makes the comparison premature: yellow wins over the
+   red/green status border (see #14). */
+.recon__row--incomplete .recon__input {
+  border-color: var(--warn);
+}
 .recon__flag {
   min-width: 3.4rem;
   text-align: right;
@@ -469,4 +482,8 @@ h2 {
 .recon__ok {
   color: #6fbf73;
   font-weight: 700;
+}
+.recon__incomplete {
+  color: var(--warn);
+  font-weight: 600;
 }

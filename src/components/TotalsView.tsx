@@ -8,7 +8,12 @@ import type {
   MieSegment,
 } from '../types';
 import { money } from '../lib/format';
-import { totalsByCategory, totalsByAccount } from '../lib/totals';
+import {
+  totalsByCategory,
+  totalsByAccount,
+  usdPendingCountsByCategory,
+  usdPendingCountsByAccount,
+} from '../lib/totals';
 import {
   reconcileCategories,
   reconcileAccounts,
@@ -49,6 +54,12 @@ export function TotalsView({
   const catMismatches = mismatchCount(categoryRecon);
   const acctMismatches = mismatchCount(accountRecon);
 
+  const catPending = usdPendingCountsByCategory(expenses);
+  const acctPending = usdPendingCountsByAccount(expenses);
+  const catIncomplete = [...catPending.values()].filter((n) => n > 0).length;
+  const acctIncomplete =
+    (acctPending.gtcc > 0 ? 1 : 0) + (acctPending.personal > 0 ? 1 : 0);
+
   return (
     <div className="stack">
       <section>
@@ -61,22 +72,36 @@ export function TotalsView({
             {catMismatches} mismatch{catMismatches > 1 ? 'es' : ''} vs DTS
           </p>
         )}
+        {catIncomplete > 0 && (
+          <p className="recon__summary recon__summary--warn">
+            {catIncomplete} row{catIncomplete > 1 ? 's' : ''} with missing USD
+          </p>
+        )}
         <div className="recon">
-          {categoryRecon.map((r) => (
-            <ReconLine
-              key={r.category}
-              label={
-                <>
-                  {r.category}
-                  {r.category === 'M&IE' && <span className="tag">per-diem</span>}
-                </>
-              }
-              rec={r.usd}
-              value={expected[r.category] ?? null}
-              ariaLabel={`DTS USD total for ${r.category}`}
-              onChange={(v) => onSetDts(r.category, v)}
-            />
-          ))}
+          {categoryRecon.map((r) => {
+            const pendingCount = catPending.get(r.category) ?? 0;
+            return (
+              <ReconLine
+                key={r.category}
+                label={
+                  <>
+                    {r.category}
+                    {r.category === 'M&IE' && <span className="tag">per-diem</span>}
+                    {pendingCount > 0 && (
+                      <span className="tag tag--warn">
+                        {pendingCount} missing USD
+                      </span>
+                    )}
+                  </>
+                }
+                rec={r.usd}
+                usdPendingCount={pendingCount}
+                value={expected[r.category] ?? null}
+                ariaLabel={`DTS USD total for ${r.category}`}
+                onChange={(v) => onSetDts(r.category, v)}
+              />
+            );
+          })}
         </div>
       </section>
 
@@ -91,17 +116,42 @@ export function TotalsView({
             {acctMismatches} mismatch{acctMismatches > 1 ? 'es' : ''} vs DTS
           </p>
         )}
+        {acctIncomplete > 0 && (
+          <p className="recon__summary recon__summary--warn">
+            {acctIncomplete} row{acctIncomplete > 1 ? 's' : ''} with missing USD
+          </p>
+        )}
         <div className="recon">
           <ReconLine
-            label="GTCC"
+            label={
+              <>
+                GTCC
+                {acctPending.gtcc > 0 && (
+                  <span className="tag tag--warn">
+                    {acctPending.gtcc} missing USD
+                  </span>
+                )}
+              </>
+            }
             rec={accountRecon[0].usd}
+            usdPendingCount={acctPending.gtcc}
             value={accountExpected.gtcc}
             ariaLabel="DTS USD reimbursement for GTCC"
             onChange={(v) => onSetAccountDts('gtcc', v)}
           />
           <ReconLine
-            label="Personal"
+            label={
+              <>
+                Personal
+                {acctPending.personal > 0 && (
+                  <span className="tag tag--warn">
+                    {acctPending.personal} missing USD
+                  </span>
+                )}
+              </>
+            }
             rec={accountRecon[1].usd}
+            usdPendingCount={acctPending.personal}
             value={accountExpected.personal}
             ariaLabel="DTS USD reimbursement for Personal"
             onChange={(v) => onSetAccountDts('personal', v)}
@@ -116,18 +166,25 @@ export function TotalsView({
 function ReconLine({
   label,
   rec,
+  usdPendingCount = 0,
   value,
   ariaLabel,
   onChange,
 }: {
   label: ReactNode;
   rec: Reconcile;
+  usdPendingCount?: number;
   value: number | null;
   ariaLabel: string;
   onChange: (value: number | null) => void;
 }) {
+  // A row missing USD is incomplete: its DTS comparison is premature, so the
+  // yellow "incomplete" border wins over the red/green status border (#14).
+  // The mismatch/match flag itself still reflects the underlying comparison.
+  const incomplete = usdPendingCount > 0;
+  const rowModifier = incomplete ? 'incomplete' : rec.status;
   return (
-    <div className={`recon__row recon__row--${rec.status}`}>
+    <div className={`recon__row recon__row--${rowModifier}`}>
       <span className="recon__name">{label}</span>
       <span className="recon__app">{money(rec.app, 'USD')}</span>
       <DtsInput value={value} label={ariaLabel} onChange={onChange} />
