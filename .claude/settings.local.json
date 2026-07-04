@@ -7,7 +7,10 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git -c 'user.name=Michael Dodson' -c user.email=dodson.michael@proton.me commit -q -m ' *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(kill bhq5k1l0z *)",
+      "Bash(gh auth *)",
+      "Bash(gh api *)"
     ]
   }
 }
