@@ -96,9 +96,13 @@ export function buildCsv(
   lines.push(row(['', '', '', '', 'M&IE TOTAL', num(report.mieTotalUsd)]));
 
   // DTS reconciliation is USD-only, so the dts/delta/status columns are USD.
+  // usd_incomplete flags a row fed by a USD-pending expense: the comparison
+  // above is premature, regardless of what status says.
   lines.push('');
   lines.push('TOTALS BY CATEGORY');
-  lines.push(row(['category', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status']));
+  lines.push(
+    row(['category', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status', 'usd_incomplete']),
+  );
   for (const r of report.categories) {
     lines.push(
       row([
@@ -108,13 +112,16 @@ export function buildCsv(
         num(r.recon.dts),
         num(r.recon.delta),
         status(r.recon.status),
+        r.usdPendingCount > 0 ? 'yes' : '',
       ]),
     );
   }
 
   lines.push('');
   lines.push('TOTALS BY ACCOUNT');
-  lines.push(row(['account', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status']));
+  lines.push(
+    row(['account', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status', 'usd_incomplete']),
+  );
   for (const a of report.accounts) {
     lines.push(
       row([
@@ -124,6 +131,7 @@ export function buildCsv(
         num(a.recon.dts),
         num(a.recon.delta),
         status(a.recon.status),
+        a.usdPendingCount > 0 ? 'yes' : '',
       ]),
     );
   }

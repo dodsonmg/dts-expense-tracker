@@ -20,6 +20,11 @@ const headFill = () =>
   ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF4' } }) as const;
 const mismatchFill = () =>
   ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7D6D6' } }) as const;
+// Yellow: USD-pending data makes the row's comparison premature. Takes
+// precedence over the red mismatch fill (see #14) — a mismatch built on an
+// incomplete total isn't a reliable signal yet.
+const pendingFill = () =>
+  ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7EFC0' } }) as const;
 
 function statusText(s: MatchStatus): string {
   return s === 'mismatch' ? 'MISMATCH' : s === 'match' ? 'ok' : '';
@@ -44,7 +49,7 @@ export async function buildXlsx(
 
   // --- Reconcile sheet: tables at the top ---
   const rec = wb.addWorksheet('Reconcile');
-  rec.columns = [16, 12, 12, 12, 12, 12].map((width) => ({ width }));
+  rec.columns = [16, 12, 12, 12, 12, 12, 14].map((width) => ({ width }));
 
   const title = rec.addRow(['DTS Expense Reconciliation']);
   title.font = { bold: true, size: 14 };
@@ -59,12 +64,21 @@ export async function buildXlsx(
     rec.addRow([]);
     rec.addRow([heading]).font = { bold: true };
 
-    const header = rec.addRow([firstCol, 'GBP', 'USD', 'DTS USD', 'Δ USD', 'Status']);
+    const header = rec.addRow([
+      firstCol,
+      'GBP',
+      'USD',
+      'DTS USD',
+      'Δ USD',
+      'Status',
+      'USD Incomplete',
+    ]);
     header.font = { bold: true };
-    for (let i = 1; i <= 6; i++) header.getCell(i).fill = headFill();
+    for (let i = 1; i <= 7; i++) header.getCell(i).fill = headFill();
 
     for (const r of rows) {
       const rec2: Reconcile = r.recon;
+      const incomplete = r.usdPendingCount > 0;
       const row = rec.addRow([
         labelOf(r),
         r.gbp,
@@ -72,10 +86,13 @@ export async function buildXlsx(
         rec2.dts,
         rec2.delta,
         statusText(rec2.status),
+        incomplete ? 'yes' : '',
       ]);
       for (const c of [2, 3, 4, 5]) row.getCell(c).numFmt = MONEY_FMT;
-      if (rec2.status === 'mismatch') {
-        for (let i = 1; i <= 6; i++) row.getCell(i).fill = mismatchFill();
+      if (incomplete) {
+        for (let i = 1; i <= 7; i++) row.getCell(i).fill = pendingFill();
+      } else if (rec2.status === 'mismatch') {
+        for (let i = 1; i <= 7; i++) row.getCell(i).fill = mismatchFill();
       }
     }
   };
@@ -119,6 +136,9 @@ export async function buildXlsx(
     ]);
     row.getCell(3).numFmt = MONEY_FMT;
     row.getCell(4).numFmt = MONEY_FMT;
+    if (e.usdPending) {
+      for (let i = 1; i <= 8; i++) row.getCell(i).fill = pendingFill();
+    }
   }
 
   // --- M&IE sheet: per-diem breakdown ---

@@ -9,7 +9,12 @@ import type {
 } from '../types';
 import { isEntered, isUsdPending } from '../types';
 import { mieTotalUsd, segmentTotal } from './mie';
-import { totalsByCategory, totalsByAccount } from './totals';
+import {
+  totalsByCategory,
+  totalsByAccount,
+  usdPendingCountsByCategory,
+  usdPendingCountsByAccount,
+} from './totals';
 import { reconcileCategories, reconcileAccounts, type Reconcile } from './reconcile';
 
 // A single structured model of an export, so the CSV and XLSX exporters render
@@ -39,6 +44,7 @@ export interface ReportCategoryRow {
   category: Category;
   gbp: number;
   usd: number;
+  usdPendingCount: number; // # expenses missing USD feeding this row; >0 = incomplete
   recon: Reconcile; // USD reconciliation vs DTS
 }
 
@@ -47,6 +53,7 @@ export interface ReportAccountRow {
   label: string; // 'GTCC' | 'Personal'
   gbp: number;
   usd: number;
+  usdPendingCount: number; // # expenses missing USD feeding this row; >0 = incomplete
   recon: Reconcile;
 }
 
@@ -68,8 +75,10 @@ export function buildReport(
   const catRecon = new Map(
     reconcileCategories(byCategory, expected).map((r) => [r.category, r.usd]),
   );
+  const catPending = usdPendingCountsByCategory(expenses);
   const byAccount = totalsByAccount(expenses, segments);
   const acctRecon = reconcileAccounts(byAccount, accountExpected);
+  const acctPending = usdPendingCountsByAccount(expenses);
 
   return {
     expenses: expenses.map((e) => ({
@@ -95,6 +104,7 @@ export function buildReport(
       category: r.category,
       gbp: r.gbp,
       usd: r.usd,
+      usdPendingCount: catPending.get(r.category) ?? 0,
       recon: catRecon.get(r.category)!,
     })),
     accounts: [
@@ -103,6 +113,7 @@ export function buildReport(
         label: 'GTCC',
         gbp: byAccount.gtcc.gbp,
         usd: byAccount.gtcc.usd,
+        usdPendingCount: acctPending.gtcc,
         recon: acctRecon[0].usd,
       },
       {
@@ -110,6 +121,7 @@ export function buildReport(
         label: 'Personal',
         gbp: byAccount.personal.gbp,
         usd: byAccount.personal.usd,
+        usdPendingCount: acctPending.personal,
         recon: acctRecon[1].usd,
       },
     ],

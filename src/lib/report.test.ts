@@ -49,6 +49,25 @@ describe('buildReport', () => {
     expect(p.recon.status).toBe('unchecked');
   });
 
+  it('flags a category/account row as USD-incomplete when it includes a pending expense', () => {
+    const r = buildReport(
+      [
+        exp({ category: 'LODGING', payment: 'GTCC', amount_gbp: 80, amount_usd: null }),
+        exp({ category: 'TRANSPORT', payment: 'personal', amount_usd: 25 }),
+      ],
+      [],
+    );
+    const lodging = r.categories.find((c) => c.category === 'LODGING')!;
+    const transport = r.categories.find((c) => c.category === 'TRANSPORT')!;
+    expect(lodging.usdPendingCount).toBe(1);
+    expect(transport.usdPendingCount).toBe(0);
+
+    const gtcc = r.accounts.find((a) => a.account === 'gtcc')!;
+    const personal = r.accounts.find((a) => a.account === 'personal')!;
+    expect(gtcc.usdPendingCount).toBe(1);
+    expect(personal.usdPendingCount).toBe(0);
+  });
+
   it('computes segment totals and the M&IE total/row', () => {
     const seg: MieSegment = {
       id: 'm',

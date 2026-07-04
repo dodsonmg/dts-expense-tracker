@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { totalsByCategory, totalsByAccount } from './totals';
+import {
+  totalsByCategory,
+  totalsByAccount,
+  usdPendingCountsByCategory,
+  usdPendingCountsByAccount,
+} from './totals';
 import { CATEGORIES, type Expense, type MieSegment } from '../types';
 
 const exp = (over: Partial<Expense> = {}): Expense => ({
@@ -78,6 +83,31 @@ describe('totalsByAccount', () => {
     expect(acct.personal.usd).toBe(200);
     expect(acct.personal.gbp).toBe(0);
     expect(acct.gtcc).toEqual({ gbp: 0, usd: 0 });
+  });
+});
+
+describe('usdPendingCountsByCategory', () => {
+  it('counts USD-pending expenses per category, zero elsewhere', () => {
+    const counts = usdPendingCountsByCategory([
+      exp({ category: 'LODGING', amount_gbp: 80, amount_usd: null }),
+      exp({ category: 'LODGING', amount_gbp: 20, amount_usd: null }),
+      exp({ category: 'TRANSPORT', amount_gbp: 10, amount_usd: 12 }), // not pending
+    ]);
+    expect(counts.get('LODGING')).toBe(2);
+    expect(counts.get('TRANSPORT')).toBe(0);
+    expect(counts.get('M&IE')).toBe(0);
+  });
+});
+
+describe('usdPendingCountsByAccount', () => {
+  it('counts USD-pending expenses per account', () => {
+    const counts = usdPendingCountsByAccount([
+      exp({ payment: 'GTCC', amount_gbp: 80, amount_usd: null }),
+      exp({ payment: 'personal', amount_gbp: 20, amount_usd: null }),
+      exp({ payment: 'personal', amount_gbp: 10, amount_usd: 12 }), // not pending
+    ]);
+    expect(counts.gtcc).toBe(1);
+    expect(counts.personal).toBe(1);
   });
 });
 

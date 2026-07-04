@@ -103,8 +103,8 @@ describe('buildCsv — DTS comparison columns', () => {
       .split('\r\n')
       .filter((l) => l.startsWith('category,') || l.startsWith('account,'));
     expect(headers).toEqual([
-      'category,gbp,usd,dts_usd,delta_usd,status',
-      'account,gbp,usd,dts_usd,delta_usd,status',
+      'category,gbp,usd,dts_usd,delta_usd,status,usd_incomplete',
+      'account,gbp,usd,dts_usd,delta_usd,status,usd_incomplete',
     ]);
   });
 
@@ -114,8 +114,10 @@ describe('buildCsv — DTS comparison columns', () => {
       [],
       { LODGING: 90 },
     );
-    // category,gbp,usd,dts_usd,delta_usd,status
-    expect(line(csv, 'LODGING,')).toBe('LODGING,0.00,100.00,90.00,10.00,MISMATCH');
+    // category,gbp,usd,dts_usd,delta_usd,status,usd_incomplete
+    expect(line(csv, 'LODGING,')).toBe(
+      'LODGING,0.00,100.00,90.00,10.00,MISMATCH,',
+    );
   });
 
   it('marks a matching category ok and leaves an unchecked one blank', () => {
@@ -124,10 +126,10 @@ describe('buildCsv — DTS comparison columns', () => {
       [],
       { LODGING: 100 },
     );
-    expect(line(matched, 'LODGING,')).toBe('LODGING,0.00,100.00,100.00,0.00,ok');
+    expect(line(matched, 'LODGING,')).toBe('LODGING,0.00,100.00,100.00,0.00,ok,');
 
     const unchecked = buildCsv([exp({ category: 'LODGING', amount_usd: 100 })], []);
-    expect(line(unchecked, 'LODGING,')).toBe('LODGING,0.00,100.00,,,');
+    expect(line(unchecked, 'LODGING,')).toBe('LODGING,0.00,100.00,,,,');
   });
 
   it('reconciles the GTCC/Personal reimbursement in the account block', () => {
@@ -140,8 +142,19 @@ describe('buildCsv — DTS comparison columns', () => {
       {},
       { gtcc: 480, personal: 200 },
     );
-    expect(line(csv, 'GTCC,')).toBe('GTCC,0.00,500.00,480.00,20.00,MISMATCH');
-    expect(line(csv, 'Personal,')).toBe('Personal,0.00,200.00,200.00,0.00,ok');
+    expect(line(csv, 'GTCC,')).toBe('GTCC,0.00,500.00,480.00,20.00,MISMATCH,');
+    expect(line(csv, 'Personal,')).toBe('Personal,0.00,200.00,200.00,0.00,ok,');
+  });
+
+  it('flags usd_incomplete on a category/account fed by a USD-pending expense', () => {
+    const csv = buildCsv(
+      [exp({ category: 'LODGING', payment: 'GTCC', amount_gbp: 80, amount_usd: null })],
+      [],
+      { LODGING: 0 },
+      { gtcc: 0, personal: null },
+    );
+    expect(line(csv, 'LODGING,')).toBe('LODGING,80.00,0.00,0.00,0.00,ok,yes');
+    expect(line(csv, 'GTCC,')).toBe('GTCC,80.00,0.00,0.00,0.00,ok,yes');
   });
 });
 
