@@ -57,13 +57,19 @@ There is no test runner or linter configured yet.
 5. **Amounts are optional** but an expense needs at least one of GBP/USD to save.
 6. **Date defaults to today, freely editable** (e.g. foreign-transaction fees
    are dated to the purchase day even though they post later).
+7. **`entered` is reconciliation metadata, not money.** It tracks whether an
+   expense has been keyed into DTS; it never affects any total. New rows default
+   to `false`; legacy rows without the field are normalized to `false` on load
+   (`db.ts`). Read it via `isEntered` (defensive against `undefined`). Surfaced
+   as a per-row toggle, a "not entered only" list filter, and a CSV column.
 
 ## Export contract
 
-`buildCsv` emits one file: `EXPENSES` rows, then `M&IE SEGMENTS`, then
-`TOTALS BY CATEGORY`, then `TOTALS BY ACCOUNT`. Money cells are plain 2-dp
-numbers (or blank) — no currency glyphs — because the office workstation
-reconciles the emailed sheet numerically against DTS. The export must stay
+`buildCsv` emits one file: `EXPENSES` rows (with `usd_pending` and
+`entered_in_dts` flag columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
+then `TOTALS BY ACCOUNT`. Money cells are plain 2-dp numbers (or blank) — no
+currency glyphs — because the office workstation reconciles the emailed sheet
+numerically against DTS. The export must stay
 usable as a standalone spreadsheet (it's the reconciliation view at the office,
 where phones are banned).
 

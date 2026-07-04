@@ -1,5 +1,5 @@
 import type { Expense, MieSegment } from '../types';
-import { isUsdPending } from '../types';
+import { isEntered, isUsdPending } from '../types';
 import { segmentTotal, mieTotalUsd } from './mie';
 import { totalsByCategory, totalsByAccount } from './totals';
 
@@ -34,6 +34,7 @@ export function buildCsv(expenses: Expense[], segments: MieSegment[]): string {
       'amount_usd',
       'payment',
       'usd_pending',
+      'entered_in_dts',
       'note',
     ]),
   );
@@ -46,6 +47,7 @@ export function buildCsv(expenses: Expense[], segments: MieSegment[]): string {
         num(e.amount_usd),
         e.payment,
         isUsdPending(e) ? 'yes' : '',
+        isEntered(e) ? 'yes' : '',
         e.note,
       ]),
     );

@@ -43,6 +43,7 @@ export function EntryForm({ onAdd, onDone }: Props) {
       amount_usd: amountUsd,
       payment,
       note: note.trim(),
+      entered: false, // new expenses haven't been keyed into DTS yet
     });
     setGbp('');
     setUsd('');

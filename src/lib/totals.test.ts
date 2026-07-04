@@ -10,6 +10,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   amount_usd: null,
   payment: 'GTCC',
   note: '',
+  entered: false,
   ...over,
 });
 
@@ -77,5 +78,22 @@ describe('totalsByAccount', () => {
     expect(acct.personal.usd).toBe(200);
     expect(acct.personal.gbp).toBe(0);
     expect(acct.gtcc).toEqual({ gbp: 0, usd: 0 });
+  });
+});
+
+describe('entered status is reconciliation metadata, not money', () => {
+  it('does not change category or account totals', () => {
+    const rows = [
+      exp({ category: 'LODGING', amount_gbp: 80, amount_usd: 100, entered: false }),
+      exp({ category: 'TRANSPORT', amount_usd: 25, payment: 'personal', entered: true }),
+    ];
+    const flipped = rows.map((e) => ({ ...e, entered: !e.entered }));
+
+    expect(totalsByCategory(flipped, [mie])).toEqual(
+      totalsByCategory(rows, [mie]),
+    );
+    expect(totalsByAccount(flipped, [mie])).toEqual(
+      totalsByAccount(rows, [mie]),
+    );
   });
 });

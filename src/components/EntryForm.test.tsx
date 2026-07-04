@@ -30,6 +30,7 @@ describe('EntryForm', () => {
         amount_gbp: null,
         amount_usd: 100.5,
         payment: 'personal',
+        entered: false, // new expenses aren't in DTS yet
       }),
     );
   });
