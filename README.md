@@ -21,11 +21,14 @@ product spec.
   USD only, always counted toward the Personal account.
 - **DTS reconciliation** — enter the USD totals DTS shows per category and per
   account (GTCC/Personal reimbursement); the app flags mismatches with a signed
-  delta. Mark each expense **"entered in DTS"** and filter the outstanding ones.
+  delta, and separately flags a row as **"incomplete"** (yellow) if any of its
+  expenses are still USD-pending, since that comparison is premature. Mark each
+  expense **"entered in DTS"** and filter the outstanding ones.
 - **Exports for the office** — a formatted **`.xlsx`** (ExcelJS) with the
-  reconciliation tables — mismatches highlighted — at the top and raw rows
-  behind, plus a plain **CSV**. Shared via the iOS share sheet (Mail) or
-  downloaded; both usable as standalone spreadsheets.
+  reconciliation tables — mismatches and incomplete rows highlighted — at the
+  top and raw rows behind, plus a plain **CSV** (`usd_incomplete` column).
+  Shared via the iOS share sheet (Mail) or downloaded; both usable as
+  standalone spreadsheets.
 - **Installable & offline** — "Add to Home Screen"; works with no signal after
   first load.
 
