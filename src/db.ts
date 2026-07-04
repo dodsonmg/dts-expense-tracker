@@ -1,5 +1,5 @@
 import localforage from 'localforage';
-import type { Expense, MieSegment } from './types';
+import type { DtsExpected, Expense, MieSegment } from './types';
 
 // Single offline store, IndexedDB-backed. Nothing leaves the device except the
 // CSV the user chooses to email (SPEC.md § No backend).
@@ -12,6 +12,7 @@ const store = localforage.createInstance({
 const KEYS = {
   expenses: 'expenses',
   segments: 'segments',
+  dtsExpected: 'dtsExpected',
 } as const;
 
 export async function loadExpenses(): Promise<Expense[]> {
@@ -31,4 +32,12 @@ export async function loadSegments(): Promise<MieSegment[]> {
 
 export async function saveSegments(segments: MieSegment[]): Promise<void> {
   await store.setItem(KEYS.segments, segments);
+}
+
+export async function loadDtsExpected(): Promise<DtsExpected> {
+  return (await store.getItem<DtsExpected>(KEYS.dtsExpected)) ?? {};
+}
+
+export async function saveDtsExpected(expected: DtsExpected): Promise<void> {
+  await store.setItem(KEYS.dtsExpected, expected);
 }

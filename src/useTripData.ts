@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Expense, MieSegment } from './types';
+import type { Currency, DtsExpected, Expense, MieSegment } from './types';
+import type { Category } from './types';
 import {
+  loadDtsExpected,
   loadExpenses,
   loadSegments,
+  saveDtsExpected,
   saveExpenses,
   saveSegments,
 } from './db';
@@ -17,18 +20,22 @@ const newId = (): string =>
 export function useTripData() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [segments, setSegments] = useState<MieSegment[]>([]);
+  const [dtsExpected, setDtsExpectedState] = useState<DtsExpected>({});
   const [loaded, setLoaded] = useState(false);
   const ready = useRef(false);
 
   useEffect(() => {
     let alive = true;
-    void Promise.all([loadExpenses(), loadSegments()]).then(([e, s]) => {
-      if (!alive) return;
-      setExpenses(e);
-      setSegments(s);
-      ready.current = true;
-      setLoaded(true);
-    });
+    void Promise.all([loadExpenses(), loadSegments(), loadDtsExpected()]).then(
+      ([e, s, d]) => {
+        if (!alive) return;
+        setExpenses(e);
+        setSegments(s);
+        setDtsExpectedState(d);
+        ready.current = true;
+        setLoaded(true);
+      },
+    );
     return () => {
       alive = false;
     };
@@ -41,6 +48,10 @@ export function useTripData() {
   useEffect(() => {
     if (ready.current) void saveSegments(segments);
   }, [segments]);
+
+  useEffect(() => {
+    if (ready.current) void saveDtsExpected(dtsExpected);
+  }, [dtsExpected]);
 
   const addExpense = useCallback((data: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...data, id: newId() }, ...prev]);
@@ -73,16 +84,30 @@ export function useTripData() {
     setSegments((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  // Set one DTS-expected total (a single category/currency cell). null clears it.
+  const setDtsExpected = useCallback(
+    (category: Category, currency: Currency, value: number | null) => {
+      const key = currency === 'GBP' ? 'gbp' : 'usd';
+      setDtsExpectedState((prev) => {
+        const cur = prev[category] ?? { gbp: null, usd: null };
+        return { ...prev, [category]: { ...cur, [key]: value } };
+      });
+    },
+    [],
+  );
+
   return {
     loaded,
     expenses,
     segments,
+    dtsExpected,
     addExpense,
     updateExpense,
     deleteExpense,
     addSegment,
     updateSegment,
     deleteSegment,
+    setDtsExpected,
   };
 }
 

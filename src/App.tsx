@@ -45,7 +45,12 @@ export default function App() {
             onDelete={trip.deleteSegment}
           />
         ) : tab === 'totals' ? (
-          <TotalsView expenses={trip.expenses} segments={trip.segments} />
+          <TotalsView
+            expenses={trip.expenses}
+            segments={trip.segments}
+            expected={trip.dtsExpected}
+            onSetDts={trip.setDtsExpected}
+          />
         ) : (
           <ExportView expenses={trip.expenses} segments={trip.segments} />
         )}
