@@ -15,7 +15,10 @@ const KEYS = {
 } as const;
 
 export async function loadExpenses(): Promise<Expense[]> {
-  return (await store.getItem<Expense[]>(KEYS.expenses)) ?? [];
+  const stored = (await store.getItem<Expense[]>(KEYS.expenses)) ?? [];
+  // Normalize rows saved before a field was added: default `entered` for
+  // legacy rows persisted without it (undefined -> false).
+  return stored.map((e) => ({ ...e, entered: e.entered ?? false }));
 }
 
 export async function saveExpenses(expenses: Expense[]): Promise<void> {

@@ -30,6 +30,7 @@ export interface Expense {
   amount_usd: number | null; // backfilled when it hits the card / typed into DTS
   payment: Payment;
   note: string;
+  entered: boolean; // reconciliation: has this been keyed into DTS yet?
 }
 
 // A single location segment of the M&IE per-diem calculation. USD only.
@@ -46,4 +47,10 @@ export interface MieSegment {
 // still outstanding on the card statement.
 export function isUsdPending(e: Expense): boolean {
   return e.amount_gbp != null && e.amount_usd == null;
+}
+
+// Whether an expense has been entered into DTS. Defensive against legacy rows
+// persisted before this field existed (undefined -> not entered / outstanding).
+export function isEntered(e: Expense): boolean {
+  return e.entered === true;
 }

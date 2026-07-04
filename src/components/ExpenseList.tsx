@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   ITEMIZED_CATEGORIES,
+  isEntered,
   isUsdPending,
   type Expense,
   type ItemizedCategory,
@@ -23,18 +24,24 @@ function parseAmount(raw: string): number | null {
 
 export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
   const [pendingOnly, setPendingOnly] = useState(false);
+  const [outstandingOnly, setOutstandingOnly] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
 
   const sorted = useMemo(
     () =>
       [...expenses]
         .filter((e) => !pendingOnly || isUsdPending(e))
+        .filter((e) => !outstandingOnly || !isEntered(e))
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-    [expenses, pendingOnly],
+    [expenses, pendingOnly, outstandingOnly],
   );
 
   const pendingCount = useMemo(
     () => expenses.filter(isUsdPending).length,
+    [expenses],
+  );
+  const outstandingCount = useMemo(
+    () => expenses.filter((e) => !isEntered(e)).length,
     [expenses],
   );
 
@@ -44,17 +51,27 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
 
   return (
     <div className="stack">
-      <label className="filter">
-        <input
-          type="checkbox"
-          checked={pendingOnly}
-          onChange={(e) => setPendingOnly(e.target.checked)}
-        />
-        <span>USD pending only ({pendingCount})</span>
-      </label>
+      <div className="filters">
+        <label className="filter">
+          <input
+            type="checkbox"
+            checked={pendingOnly}
+            onChange={(e) => setPendingOnly(e.target.checked)}
+          />
+          <span>USD pending only ({pendingCount})</span>
+        </label>
+        <label className="filter">
+          <input
+            type="checkbox"
+            checked={outstandingOnly}
+            onChange={(e) => setOutstandingOnly(e.target.checked)}
+          />
+          <span>Not entered in DTS only ({outstandingCount})</span>
+        </label>
+      </div>
 
       {sorted.length === 0 ? (
-        <p className="muted">No USD-pending expenses.</p>
+        <p className="muted">No expenses match the current filters.</p>
       ) : (
         <ul className="list">
           {sorted.map((e) =>
@@ -73,21 +90,47 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
                 }}
               />
             ) : (
-              <li key={e.id} className="row" onClick={() => setEditing(e.id)}>
-                <div className="row__main">
-                  <span className="row__cat">{e.category}</span>
-                  {e.note && <span className="row__note">{e.note}</span>}
-                </div>
-                <div className="row__meta">
-                  <span className="row__amounts">
-                    {money(e.amount_gbp, 'GBP')} · {money(e.amount_usd, 'USD')}
-                  </span>
-                  <span className="row__sub">
-                    {e.date} · {e.payment === 'GTCC' ? 'GTCC' : 'Personal'}
-                    {isUsdPending(e) && (
-                      <span className="badge">USD pending</span>
-                    )}
-                  </span>
+              <li
+                key={e.id}
+                className={`row${isEntered(e) ? ' row--entered' : ''}`}
+              >
+                <button
+                  type="button"
+                  className={`row__check${isEntered(e) ? ' row__check--on' : ''}`}
+                  aria-pressed={isEntered(e)}
+                  aria-label={
+                    isEntered(e)
+                      ? 'Entered in DTS — tap to unmark'
+                      : 'Mark as entered in DTS'
+                  }
+                  onClick={() => onUpdate(e.id, { entered: !isEntered(e) })}
+                >
+                  <span aria-hidden>{isEntered(e) ? '✓' : ''}</span>
+                </button>
+                <div
+                  className="row__body"
+                  onClick={() => setEditing(e.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') setEditing(e.id);
+                  }}
+                >
+                  <div className="row__main">
+                    <span className="row__cat">{e.category}</span>
+                    {e.note && <span className="row__note">{e.note}</span>}
+                  </div>
+                  <div className="row__meta">
+                    <span className="row__amounts">
+                      {money(e.amount_gbp, 'GBP')} · {money(e.amount_usd, 'USD')}
+                    </span>
+                    <span className="row__sub">
+                      {e.date} · {e.payment === 'GTCC' ? 'GTCC' : 'Personal'}
+                      {isUsdPending(e) && (
+                        <span className="badge">USD pending</span>
+                      )}
+                    </span>
+                  </div>
                 </div>
               </li>
             ),
@@ -112,6 +155,7 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
   const [usd, setUsd] = useState(expense.amount_usd?.toString() ?? '');
   const [payment, setPayment] = useState<Payment>(expense.payment);
   const [note, setNote] = useState(expense.note);
+  const [entered, setEntered] = useState(isEntered(expense));
 
   return (
     <li className="row row--edit">
@@ -183,6 +227,14 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
           onChange={(e) => setNote(e.target.value)}
         />
       </label>
+      <label className="filter">
+        <input
+          type="checkbox"
+          checked={entered}
+          onChange={(e) => setEntered(e.target.checked)}
+        />
+        <span>Entered in DTS</span>
+      </label>
       <div className="form__actions">
         <button
           type="button"
@@ -195,6 +247,7 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
               amount_usd: parseAmount(usd),
               payment,
               note: note.trim(),
+              entered,
             })
           }
         >

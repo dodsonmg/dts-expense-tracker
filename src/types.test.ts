@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CATEGORIES,
   ITEMIZED_CATEGORIES,
+  isEntered,
   isUsdPending,
   type Expense,
 } from './types';
@@ -14,6 +15,7 @@ const exp = (gbp: number | null, usd: number | null): Expense => ({
   amount_usd: usd,
   payment: 'GTCC',
   note: '',
+  entered: false,
 });
 
 describe('categories', () => {
@@ -41,5 +43,19 @@ describe('isUsdPending', () => {
 
   it('treats zero GBP as a real amount, not missing', () => {
     expect(isUsdPending(exp(0, null))).toBe(true);
+  });
+});
+
+describe('isEntered', () => {
+  it('is true only when entered is exactly true', () => {
+    expect(isEntered({ ...exp(10, 12), entered: true })).toBe(true);
+    expect(isEntered({ ...exp(10, 12), entered: false })).toBe(false);
+  });
+
+  it('treats a legacy row missing the field as not entered', () => {
+    // Rows persisted before `entered` existed have no such field.
+    const legacy = exp(10, 12) as Partial<Expense>;
+    delete legacy.entered;
+    expect(isEntered(legacy as Expense)).toBe(false);
   });
 });
