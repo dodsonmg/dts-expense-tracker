@@ -3,6 +3,7 @@ dist
 dist-ssr
 dev-dist
 coverage
+*.tsbuildinfo
 *.local
 .DS_Store
 .vite
