@@ -1,21 +1,33 @@
 import { useState } from 'react';
-import type { Expense, MieSegment } from '../types';
+import type {
+  DtsAccountExpected,
+  DtsExpected,
+  Expense,
+  MieSegment,
+} from '../types';
 import { buildCsv, csvFilename } from '../lib/csv';
 
 interface Props {
   expenses: Expense[];
   segments: MieSegment[];
+  expected: DtsExpected;
+  accountExpected: DtsAccountExpected;
 }
 
 // One tap → CSV to email to self. Uses the Web Share API (iOS shows Mail) when
 // available, and always offers a plain download as a fallback.
-export function ExportView({ expenses, segments }: Props) {
+export function ExportView({
+  expenses,
+  segments,
+  expected,
+  accountExpected,
+}: Props) {
   const [status, setStatus] = useState<string | null>(null);
 
   const empty = expenses.length === 0 && segments.length === 0;
 
   function makeFile(): { blob: Blob; name: string } {
-    const csv = buildCsv(expenses, segments);
+    const csv = buildCsv(expenses, segments, expected, accountExpected);
     return {
       blob: new Blob([csv], { type: 'text/csv' }),
       name: csvFilename(),
@@ -54,8 +66,9 @@ export function ExportView({ expenses, segments }: Props) {
   return (
     <div className="stack">
       <p className="muted small">
-        Exports raw rows plus a totals block (by category and by account,
-        GBP/USD kept separate) as a single CSV to email to yourself.
+        Exports raw rows plus a totals block — by category and by account, each
+        with your DTS figure and any mismatch — as a single CSV to email to
+        yourself. This is the reconciliation view for the office.
       </p>
 
       <button
