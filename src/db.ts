@@ -1,5 +1,10 @@
 import localforage from 'localforage';
-import type { DtsExpected, Expense, MieSegment } from './types';
+import type {
+  DtsAccountExpected,
+  DtsExpected,
+  Expense,
+  MieSegment,
+} from './types';
 
 // Single offline store, IndexedDB-backed. Nothing leaves the device except the
 // CSV the user chooses to email (SPEC.md § No backend).
@@ -13,6 +18,7 @@ const KEYS = {
   expenses: 'expenses',
   segments: 'segments',
   dtsExpected: 'dtsExpected',
+  dtsAccountExpected: 'dtsAccountExpected',
 } as const;
 
 export async function loadExpenses(): Promise<Expense[]> {
@@ -35,9 +41,36 @@ export async function saveSegments(segments: MieSegment[]): Promise<void> {
 }
 
 export async function loadDtsExpected(): Promise<DtsExpected> {
-  return (await store.getItem<DtsExpected>(KEYS.dtsExpected)) ?? {};
+  const stored = (await store.getItem<Record<string, unknown>>(
+    KEYS.dtsExpected,
+  )) ?? {};
+  // Normalize any earlier {gbp, usd} shape down to the USD-only number model.
+  const out: DtsExpected = {};
+  for (const [cat, val] of Object.entries(stored)) {
+    const usd =
+      val != null && typeof val === 'object'
+        ? ((val as { usd?: number | null }).usd ?? null)
+        : (val as number | null);
+    out[cat as keyof DtsExpected] = usd;
+  }
+  return out;
 }
 
 export async function saveDtsExpected(expected: DtsExpected): Promise<void> {
   await store.setItem(KEYS.dtsExpected, expected);
+}
+
+export async function loadDtsAccountExpected(): Promise<DtsAccountExpected> {
+  return (
+    (await store.getItem<DtsAccountExpected>(KEYS.dtsAccountExpected)) ?? {
+      gtcc: null,
+      personal: null,
+    }
+  );
+}
+
+export async function saveDtsAccountExpected(
+  expected: DtsAccountExpected,
+): Promise<void> {
+  await store.setItem(KEYS.dtsAccountExpected, expected);
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type {
+  Account,
   Category,
-  Currency,
+  DtsAccountExpected,
   DtsExpected,
   Expense,
   MieSegment,
@@ -10,19 +11,18 @@ import { money } from '../lib/format';
 import { totalsByCategory, totalsByAccount } from '../lib/totals';
 import {
   reconcileCategories,
+  reconcileAccounts,
   mismatchCount,
-  type CurrencyReconcile,
+  type Reconcile,
 } from '../lib/reconcile';
 
 interface Props {
   expenses: Expense[];
   segments: MieSegment[];
   expected: DtsExpected;
-  onSetDts: (
-    category: Category,
-    currency: Currency,
-    value: number | null,
-  ) => void;
+  accountExpected: DtsAccountExpected;
+  onSetDts: (category: Category, value: number | null) => void;
+  onSetAccountDts: (account: Account, value: number | null) => void;
 }
 
 function parseAmount(raw: string): number | null {
@@ -32,124 +32,122 @@ function parseAmount(raw: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-// Two tables, GBP and USD kept separate throughout (never summed together).
-// "By category" doubles as the DTS reconciliation view.
-export function TotalsView({ expenses, segments, expected, onSetDts }: Props) {
+// DTS reports USD only, so both reconciliations compare USD app totals against
+// the USD totals the user reads off DTS.
+export function TotalsView({
+  expenses,
+  segments,
+  expected,
+  accountExpected,
+  onSetDts,
+  onSetAccountDts,
+}: Props) {
   const byCategory = totalsByCategory(expenses, segments);
   const byAccount = totalsByAccount(expenses, segments);
-  const recon = reconcileCategories(byCategory, expected);
-  const mismatches = mismatchCount(recon);
+  const categoryRecon = reconcileCategories(byCategory, expected);
+  const accountRecon = reconcileAccounts(byAccount, accountExpected);
+  const catMismatches = mismatchCount(categoryRecon);
+  const acctMismatches = mismatchCount(accountRecon);
 
   return (
     <div className="stack">
       <section>
-        <h2>By category — reconcile vs DTS</h2>
+        <h2>By category — reconcile vs DTS (USD)</h2>
         <p className="muted small">
           Enter the total DTS shows for each category; mismatches are flagged.
-          GBP and USD are checked separately and never summed.
         </p>
-        {mismatches > 0 && (
+        {catMismatches > 0 && (
           <p className="recon__summary">
-            {mismatches} mismatch{mismatches > 1 ? 'es' : ''} vs DTS
+            {catMismatches} mismatch{catMismatches > 1 ? 'es' : ''} vs DTS
           </p>
         )}
-
         <div className="recon">
-          {recon.map((r) => (
-            <div key={r.category} className="recon__cat">
-              <div className="recon__name">
-                {r.category}
-                {r.category === 'M&IE' && <span className="tag">per-diem</span>}
-              </div>
-              {(['GBP', 'USD'] as const).map((currency) => {
-                const cell: CurrencyReconcile =
-                  currency === 'GBP' ? r.gbp : r.usd;
-                const stored =
-                  (currency === 'GBP'
-                    ? expected[r.category]?.gbp
-                    : expected[r.category]?.usd) ?? null;
-                return (
-                  <div
-                    key={currency}
-                    className={`recon__row recon__row--${cell.status}`}
-                  >
-                    <span className="recon__cur">{currency}</span>
-                    <span className="recon__app">
-                      {money(cell.app, currency)}
-                    </span>
-                    <DtsInput
-                      value={stored}
-                      label={`DTS ${currency} total for ${r.category}`}
-                      onChange={(v) => onSetDts(r.category, currency, v)}
-                    />
-                    <span className="recon__flag">
-                      {cell.status === 'mismatch' ? (
-                        <span
-                          className="recon__delta"
-                          aria-label={`${currency} off by ${money(
-                            Math.abs(cell.delta ?? 0),
-                            currency,
-                          )}`}
-                        >
-                          {`${(cell.delta ?? 0) > 0 ? '+' : '−'}${money(
-                            Math.abs(cell.delta ?? 0),
-                            currency,
-                          )}`}
-                        </span>
-                      ) : cell.status === 'match' ? (
-                        <span className="recon__ok" aria-label="matches DTS">
-                          ✓
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+          {categoryRecon.map((r) => (
+            <ReconLine
+              key={r.category}
+              label={
+                <>
+                  {r.category}
+                  {r.category === 'M&IE' && <span className="tag">per-diem</span>}
+                </>
+              }
+              rec={r.usd}
+              value={expected[r.category] ?? null}
+              ariaLabel={`DTS USD total for ${r.category}`}
+              onChange={(v) => onSetDts(r.category, v)}
+            />
           ))}
         </div>
       </section>
 
       <section>
-        <h2>By account</h2>
+        <h2>By account — reconcile reimbursement (USD)</h2>
         <p className="muted small">
-          Verifies the split disbursement: GTCC charges repay the card,
+          Verify the split disbursement: GTCC charges repay the card,
           out-of-pocket goes to the bank. M&amp;IE always counts toward Personal.
         </p>
-        <table className="totals">
-          <thead>
-            <tr>
-              <th>Account</th>
-              <th className="num">GBP</th>
-              <th className="num">USD</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>GTCC</td>
-              <td className="num">
-                {byAccount.gtcc.gbp ? money(byAccount.gtcc.gbp, 'GBP') : '—'}
-              </td>
-              <td className="num">
-                {byAccount.gtcc.usd ? money(byAccount.gtcc.usd, 'USD') : '—'}
-              </td>
-            </tr>
-            <tr>
-              <td>Personal</td>
-              <td className="num">
-                {byAccount.personal.gbp
-                  ? money(byAccount.personal.gbp, 'GBP')
-                  : '—'}
-              </td>
-              <td className="num">
-                {byAccount.personal.usd
-                  ? money(byAccount.personal.usd, 'USD')
-                  : '—'}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {acctMismatches > 0 && (
+          <p className="recon__summary">
+            {acctMismatches} mismatch{acctMismatches > 1 ? 'es' : ''} vs DTS
+          </p>
+        )}
+        <div className="recon">
+          <ReconLine
+            label="GTCC"
+            rec={accountRecon[0].usd}
+            value={accountExpected.gtcc}
+            ariaLabel="DTS USD reimbursement for GTCC"
+            onChange={(v) => onSetAccountDts('gtcc', v)}
+          />
+          <ReconLine
+            label="Personal"
+            rec={accountRecon[1].usd}
+            value={accountExpected.personal}
+            ariaLabel="DTS USD reimbursement for Personal"
+            onChange={(v) => onSetAccountDts('personal', v)}
+          />
+        </div>
       </section>
+    </div>
+  );
+}
+
+// One reconcile row: label, app USD total, editable DTS input, mismatch flag.
+function ReconLine({
+  label,
+  rec,
+  value,
+  ariaLabel,
+  onChange,
+}: {
+  label: ReactNode;
+  rec: Reconcile;
+  value: number | null;
+  ariaLabel: string;
+  onChange: (value: number | null) => void;
+}) {
+  return (
+    <div className={`recon__row recon__row--${rec.status}`}>
+      <span className="recon__name">{label}</span>
+      <span className="recon__app">{money(rec.app, 'USD')}</span>
+      <DtsInput value={value} label={ariaLabel} onChange={onChange} />
+      <span className="recon__flag">
+        {rec.status === 'mismatch' ? (
+          <span
+            className="recon__delta"
+            aria-label={`off by ${money(Math.abs(rec.delta ?? 0), 'USD')}`}
+          >
+            {`${(rec.delta ?? 0) > 0 ? '+' : '−'}${money(
+              Math.abs(rec.delta ?? 0),
+              'USD',
+            )}`}
+          </span>
+        ) : rec.status === 'match' ? (
+          <span className="recon__ok" aria-label="matches DTS">
+            ✓
+          </span>
+        ) : null}
+      </span>
     </div>
   );
 }

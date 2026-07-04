@@ -47,8 +47,9 @@ There is no test runner or linter configured yet.
 
 ## Domain invariants — get these wrong and the tool is misleading
 
-1. **Currencies are never summed together.** GBP and USD stay in separate
-   columns/blocks everywhere (UI totals and CSV). There is no conversion.
+1. **Currencies are never summed together.** GBP and USD stay separate; there is
+   no conversion. The CSV export keeps both; the in-app Totals screen is a
+   USD-only reconciliation view (since DTS is USD).
 2. **M&IE is computed, USD only, and always Personal.** It comes from the
    per-diem calculator (`mieTotalUsd`), never from itemized rows. It feeds the
    `M&IE` category row (USD) and the Personal account bucket (USD) — never GTCC,
@@ -65,12 +66,13 @@ There is no test runner or linter configured yet.
    to `false`; legacy rows without the field are normalized to `false` on load
    (`db.ts`). Read it via `isEntered` (defensive against `undefined`). Surfaced
    as a per-row toggle, a "not entered only" list filter, and a CSV column.
-8. **DTS reconciliation compares per currency, at cent precision.** `DtsExpected`
-   holds the totals the user reads off DTS (per category, per currency; null =
-   unchecked). `reconcileCategories` compares each currency against its own app
-   total only — GBP-to-GBP, USD-to-USD, never crossed — and treats sub-half-cent
-   gaps as a match (float noise), anything larger as a mismatch. It's input, not
-   truth: it never alters the computed totals.
+8. **DTS reconciliation is USD-only** (DTS reports USD). `DtsExpected` (per
+   category) and `DtsAccountExpected` (GTCC/Personal reimbursement) hold the USD
+   totals the user reads off DTS; null/absent = unchecked. `reconcileCategories`
+   and `reconcileAccounts` compare the app's USD totals at cent precision
+   (sub-half-cent gap = match/float noise, larger = mismatch). It's input, not
+   truth: it never alters the computed totals. GBP receipts are matched to USD
+   entries at the expense level (the List), not here.
 
 ## Export contract
 
