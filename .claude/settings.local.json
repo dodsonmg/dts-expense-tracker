@@ -6,7 +6,8 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(git add *)",
-      "Bash(git -c 'user.name=Michael Dodson' -c user.email=dodson.michael@proton.me commit -q -m ' *)"
+      "Bash(git -c 'user.name=Michael Dodson' -c user.email=dodson.michael@proton.me commit -q -m ' *)",
+      "Bash(npm test *)"
     ]
   }
 }
