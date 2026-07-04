@@ -1,0 +1,143 @@
+# DTS Expense Tracker — Specification
+
+A personal, offline-first tool to (1) capture and classify expenses during a trip
+from an iPhone, and (2) reconcile those expenses against the DTS
+(Defense Travel System) reimbursement system, checking category totals and the
+GTCC-vs-personal split.
+
+## Context & constraints
+
+- **Capture device:** iPhone. Installable PWA ("Add to Home Screen"), fully usable
+  offline (no signal during travel).
+- **Reconciliation happens in two venues, weighted equally:**
+  - **Office:** phone not allowed; locked-down government workstation; can email a
+    spreadsheet to a government email address and view it beside DTS. → the
+    **exported file** is the reconciliation view here.
+  - **Home:** personal phone/laptop available. → the **app itself** is the
+    reconciliation view here.
+- **Implication:** the app must work well both as a live app and as an exported
+  spreadsheet. Export is a first-class feature.
+- **No backend.** Data lives on the phone (IndexedDB). Nothing leaves the device
+  except the CSV/spreadsheet the user chooses to email. No accounts, no sync.
+- Because data is local to the phone, it does not automatically appear on the home
+  laptop. That is acceptable: office uses the emailed file; home reconciles on the
+  phone. Interactive laptop reconciliation (file import) is deferred to Phase 4.
+
+## Currency model (OCONUS, no conversion)
+
+Each itemized expense carries **two amount fields, both optional**:
+
+- `amount_gbp` — entered at time of purchase; matches the uploaded receipt.
+- `amount_usd` — backfilled later when the charge lands on the credit card;
+  matches what is typed into DTS.
+
+No automatic conversion. Seeing GBP and USD side by side lets the user match a
+GBP receipt to a USD DTS entry. An expense with a GBP amount but no USD amount is
+**"USD pending"** (still outstanding on the card statement) and must be surfaced as
+a filter/flag.
+
+Totals **never mix currencies**: every totals table shows separate GBP and USD
+columns/blocks that are never summed together.
+
+## Categories (fixed set, fixed order)
+
+1. COM CARRIER
+2. GTCC (FEES)
+3. LODGING
+4. M&IE
+5. MILEAGE
+6. TRANSPORT
+7. OTHER
+
+## Data model
+
+### Itemized expense
+Applies to all categories EXCEPT M&IE.
+
+| field         | notes                                                            |
+|---------------|------------------------------------------------------------------|
+| `id`          | generated                                                        |
+| `date`        | defaults to today on entry; **freely editable** (e.g. foreign transaction fees are dated to the purchase day even though they appear later) |
+| `category`    | one of the fixed categories except M&IE                          |
+| `amount_gbp`  | optional                                                         |
+| `amount_usd`  | optional; backfilled when it hits the card                       |
+| `payment`     | `GTCC` or `personal`                                             |
+| `note`        | optional (vendor / receipt reference)                            |
+
+### M&IE (per-diem calculator, not receipts)
+M&IE is a computed allowance, **USD only**, and always contributes to the
+**Personal** account bucket (never GTCC).
+
+Composed of one or more **location segments**:
+
+| field          | notes                          |
+|----------------|--------------------------------|
+| `location`     | label only; not used in math   |
+| `full_rate`    | USD full-day rate              |
+| `partial_rate` | USD partial-day rate           |
+| `full_days`    | count                          |
+| `partial_days` | count                          |
+
+**M&IE total** =
+`Σ over all segments of (full_rate × full_days + partial_rate × partial_days)`
+
+The `location` field is a per-segment label for readability; it does not enter the
+summation. The total chains across every segment.
+
+### MILEAGE
+Manual USD/GBP amount entry via the normal itemized expense form for now
+(uses its own GTCC/personal toggle). A miles × rate calculator is deferred to
+Phase 3.
+
+## Totals / reconciliation view
+
+Two tables, GBP and USD kept separate throughout:
+
+1. **By category** — rows in the fixed category order above; used to check against
+   the totals DTS shows. M&IE row is fed from the per-diem calculator (USD).
+2. **By account** — GTCC vs Personal, used to verify the split disbursement
+   (GTCC charges repay the card; out-of-pocket goes to the bank).
+   **M&IE always counts toward Personal.**
+
+## Screens (MVP)
+
+1. **Entry** — form with tap dropdowns for category/payment, GBP and USD fields
+   side by side, editable date defaulting to today. Optimized for fast repeated
+   entry.
+2. **List** — all expenses for the trip; editable/deletable; "USD pending" filter.
+3. **M&IE** — segment table with a running M&IE total.
+4. **Totals** — by category and by account, GBP/USD separate, M&IE folded in (USD,
+   Personal).
+5. **Export** — one tap → CSV (raw rows + totals block) to email to self.
+
+## Tech stack
+
+- **Vite + React + TypeScript.**
+- Local persistence in **IndexedDB** (via localForage).
+- **CSV export** hand-rolled (no dependency) for MVP.
+- **PWA** install via `vite-plugin-pwa`; must work offline after first load.
+- **Hosting:** free static host with HTTPS (Netlify or GitHub Pages) so the iPhone
+  can install it and run offline. No backend.
+
+## Phased plan
+
+**MVP**
+1. Itemized expense entry (date default+editable, category, GBP, USD, GTCC/personal, note).
+2. M&IE per-diem calculator (multi-segment, USD, → Personal).
+3. Live totals by category and by account, GBP/USD separate.
+4. CSV export to email; local persistence; "USD pending" filter.
+
+**Phase 2 — reconciliation**
+5. Check off each item as "entered in DTS."
+6. Enter DTS's shown category totals; app flags mismatches (per currency).
+7. Formatted `.xlsx` export (SheetJS) with totals tables pre-built at the top.
+
+**Phase 3 — multi-trip + robustness**
+8. Multiple trips; per-trip export.
+9. PWA install/offline polish.
+10. Backup/restore all data as a file.
+11. Optional MILEAGE calculator (miles × rate).
+
+**Phase 4 — nice-to-haves**
+12. Receipt photos.
+13. Interactive laptop reconciliation via file import / self-contained HTML export.
