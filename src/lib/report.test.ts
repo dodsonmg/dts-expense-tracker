@@ -1,0 +1,66 @@
+import { describe, it, expect } from 'vitest';
+import { buildReport } from './report';
+import type { Expense, MieSegment } from '../types';
+
+const exp = (over: Partial<Expense> = {}): Expense => ({
+  id: 'e',
+  date: '2026-07-01',
+  category: 'LODGING',
+  amount_gbp: null,
+  amount_usd: null,
+  payment: 'GTCC',
+  note: '',
+  entered: false,
+  ...over,
+});
+
+describe('buildReport', () => {
+  it('maps expense flags (usd pending, entered)', () => {
+    const r = buildReport(
+      [exp({ amount_gbp: 5, amount_usd: null, entered: false })],
+      [],
+    );
+    expect(r.expenses[0].usdPending).toBe(true);
+    expect(r.expenses[0].entered).toBe(false);
+  });
+
+  it('carries the USD reconciliation per category', () => {
+    const r = buildReport([exp({ category: 'LODGING', amount_usd: 100 })], [], {
+      LODGING: 90,
+    });
+    const l = r.categories.find((c) => c.category === 'LODGING')!;
+    expect(l.usd).toBe(100);
+    expect(l.recon.status).toBe('mismatch');
+    expect(l.recon.delta).toBe(10);
+  });
+
+  it('carries account reimbursement reconciliation with labels', () => {
+    const r = buildReport(
+      [exp({ payment: 'GTCC', amount_usd: 500 })],
+      [],
+      {},
+      { gtcc: 480, personal: null },
+    );
+    const g = r.accounts.find((a) => a.account === 'gtcc')!;
+    expect(g.label).toBe('GTCC');
+    expect(g.usd).toBe(500);
+    expect(g.recon.status).toBe('mismatch');
+    const p = r.accounts.find((a) => a.account === 'personal')!;
+    expect(p.recon.status).toBe('unchecked');
+  });
+
+  it('computes segment totals and the M&IE total/row', () => {
+    const seg: MieSegment = {
+      id: 'm',
+      location: 'base',
+      full_rate: 100,
+      partial_rate: 0,
+      full_days: 2,
+      partial_days: 0,
+    };
+    const r = buildReport([], [seg]);
+    expect(r.segments[0].usd).toBe(200);
+    expect(r.mieTotalUsd).toBe(200);
+    expect(r.categories.find((c) => c.category === 'M&IE')!.usd).toBe(200);
+  });
+});
