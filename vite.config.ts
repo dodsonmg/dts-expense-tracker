@@ -8,6 +8,11 @@ const base = process.env.VITE_BASE ?? '/dts-expense-tracker/';
 
 export default defineConfig({
   base,
+  build: {
+    // ExcelJS is a deliberately code-split, lazy-loaded chunk (~270 kB gzip),
+    // loaded only when the user exports. Raise the advisory warning threshold.
+    chunkSizeWarningLimit: 1000,
+  },
   plugins: [
     react(),
     VitePWA({

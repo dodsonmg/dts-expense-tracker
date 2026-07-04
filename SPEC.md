@@ -115,6 +115,10 @@ Two tables, GBP and USD kept separate throughout:
 - **Vite + React + TypeScript.**
 - Local persistence in **IndexedDB** (via localForage).
 - **CSV export** hand-rolled (no dependency) for MVP.
+- **`.xlsx` export via ExcelJS** (Phase 2) — chosen over SheetJS because
+  SheetJS's free tier can't style cells, and highlighting mismatches is the
+  point of the office view. Lazy-loaded (dynamic import) to keep initial load
+  lean; precached for offline export.
 - **PWA** install via `vite-plugin-pwa`; must work offline after first load.
 - **Hosting:** free static host with HTTPS (Netlify or GitHub Pages) so the iPhone
   can install it and run offline. No backend.
@@ -127,10 +131,18 @@ Two tables, GBP and USD kept separate throughout:
 3. Live totals by category and by account, GBP/USD separate.
 4. CSV export to email; local persistence; "USD pending" filter.
 
+> **Status:** MVP and Phase 2 are implemented and deployed. Two decisions
+> refined the plan below during build:
+> - Reconciliation is **USD-only** (DTS reports USD), so item 6's "per currency"
+>   intent is realized as USD-to-USD checks; it also covers **account**
+>   reimbursement, not just categories.
+> - Item 7 uses **ExcelJS**, not SheetJS (see Tech stack).
+
 **Phase 2 — reconciliation**
 5. Check off each item as "entered in DTS."
-6. Enter DTS's shown category totals; app flags mismatches (per currency).
-7. Formatted `.xlsx` export (SheetJS) with totals tables pre-built at the top.
+6. Enter DTS's shown category *and account* totals (USD); app flags mismatches.
+7. Formatted `.xlsx` export (ExcelJS) with the reconciliation tables pre-built
+   at the top; the CSV export also carries the DTS comparison columns.
 
 **Phase 3 — multi-trip + robustness**
 8. Multiple trips; per-trip export.

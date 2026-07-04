@@ -4,14 +4,8 @@ import type {
   Expense,
   MieSegment,
 } from '../types';
-import { isEntered, isUsdPending } from '../types';
-import { segmentTotal, mieTotalUsd } from './mie';
-import { totalsByCategory, totalsByAccount } from './totals';
-import {
-  reconcileCategories,
-  reconcileAccounts,
-  type MatchStatus,
-} from './reconcile';
+import { buildReport } from './report';
+import type { MatchStatus } from './reconcile';
 
 // Hand-rolled CSV (no dependency, per SPEC.md). Excel/Sheets-safe escaping.
 function cell(value: string | number | null): string {
@@ -44,6 +38,7 @@ export function buildCsv(
   expected: DtsExpected = {},
   accountExpected: DtsAccountExpected = { gtcc: null, personal: null },
 ): string {
+  const report = buildReport(expenses, segments, expected, accountExpected);
   const lines: string[] = [];
 
   lines.push('EXPENSES');
@@ -59,16 +54,16 @@ export function buildCsv(
       'note',
     ]),
   );
-  for (const e of expenses) {
+  for (const e of report.expenses) {
     lines.push(
       row([
         e.date,
         e.category,
-        num(e.amount_gbp),
-        num(e.amount_usd),
+        num(e.amountGbp),
+        num(e.amountUsd),
         e.payment,
-        isUsdPending(e) ? 'yes' : '',
-        isEntered(e) ? 'yes' : '',
+        e.usdPending ? 'yes' : '',
+        e.entered ? 'yes' : '',
         e.note,
       ]),
     );
@@ -86,71 +81,52 @@ export function buildCsv(
       'segment_usd',
     ]),
   );
-  for (const s of segments) {
+  for (const s of report.segments) {
     lines.push(
       row([
         s.location,
-        num(s.full_rate),
-        s.full_days,
-        num(s.partial_rate),
-        s.partial_days,
-        num(segmentTotal(s)),
+        num(s.fullRate),
+        s.fullDays,
+        num(s.partialRate),
+        s.partialDays,
+        num(s.usd),
       ]),
     );
   }
-  lines.push(row(['', '', '', '', 'M&IE TOTAL', num(mieTotalUsd(segments))]));
+  lines.push(row(['', '', '', '', 'M&IE TOTAL', num(report.mieTotalUsd)]));
 
   // DTS reconciliation is USD-only, so the dts/delta/status columns are USD.
-  const byCategory = totalsByCategory(expenses, segments);
-  const catRecon = new Map(
-    reconcileCategories(byCategory, expected).map((r) => [r.category, r.usd]),
-  );
-
   lines.push('');
   lines.push('TOTALS BY CATEGORY');
   lines.push(row(['category', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status']));
-  for (const r of byCategory) {
-    const rec = catRecon.get(r.category)!;
+  for (const r of report.categories) {
     lines.push(
       row([
         r.category,
         num(r.gbp),
         num(r.usd),
-        num(rec.dts),
-        num(rec.delta),
-        status(rec.status),
+        num(r.recon.dts),
+        num(r.recon.delta),
+        status(r.recon.status),
       ]),
     );
   }
 
-  const acct = totalsByAccount(expenses, segments);
-  const acctRecon = reconcileAccounts(acct, accountExpected);
-  const gtcc = acctRecon[0].usd;
-  const personal = acctRecon[1].usd;
-
   lines.push('');
   lines.push('TOTALS BY ACCOUNT');
   lines.push(row(['account', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status']));
-  lines.push(
-    row([
-      'GTCC',
-      num(acct.gtcc.gbp),
-      num(acct.gtcc.usd),
-      num(gtcc.dts),
-      num(gtcc.delta),
-      status(gtcc.status),
-    ]),
-  );
-  lines.push(
-    row([
-      'Personal',
-      num(acct.personal.gbp),
-      num(acct.personal.usd),
-      num(personal.dts),
-      num(personal.delta),
-      status(personal.status),
-    ]),
-  );
+  for (const a of report.accounts) {
+    lines.push(
+      row([
+        a.label,
+        num(a.gbp),
+        num(a.usd),
+        num(a.recon.dts),
+        num(a.recon.delta),
+        status(a.recon.status),
+      ]),
+    );
+  }
 
   return lines.join('\r\n');
 }

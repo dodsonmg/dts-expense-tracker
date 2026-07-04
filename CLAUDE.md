@@ -39,8 +39,12 @@ There is no test runner or linter configured yet.
 - `src/lib/` — pure functions, no React:
   - `mie.ts` — M&IE per-diem math.
   - `totals.ts` — by-category and by-account totals.
-  - `reconcile.ts` — compares app category totals against DTS-entered totals.
-  - `csv.ts` — export document.
+  - `reconcile.ts` — compares app totals against DTS-entered totals (USD).
+  - `report.ts` — one structured export model consumed by both exporters, so
+    CSV and XLSX never drift.
+  - `csv.ts` — CSV export document.
+  - `xlsx.ts` — formatted `.xlsx` (ExcelJS, dynamically imported to stay out of
+    the main bundle).
   - `format.ts` — currency + date helpers.
 - `src/components/` — one file per screen: `EntryForm`, `ExpenseList`,
   `MieView`, `TotalsView`, `ExportView`. `App.tsx` is the tab shell.
@@ -82,7 +86,13 @@ then `TOTALS BY ACCOUNT`. The two totals blocks carry the DTS comparison
 (`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) so
 the emailed sheet works as the office's reconciliation view. Money cells are
 plain 2-dp numbers (or blank) — no currency glyphs — because the office
-workstation reconciles the sheet numerically against DTS. The export must stay
+workstation reconciles the sheet numerically against DTS.
+
+The formatted `.xlsx` (`buildXlsx`, ExcelJS) renders from the same `report.ts`
+model: a **Reconcile** sheet with the by-category and by-account tables at the
+top (mismatch rows highlighted), then **Expenses** (raw rows) and **M&IE**
+sheets. Both exporters must render from `buildReport` so they never diverge.
+ExcelJS is dynamically imported; keep it out of any statically-loaded module. The export must stay
 usable as a standalone spreadsheet (it's the reconciliation view at the office,
 where phones are banned).
 
