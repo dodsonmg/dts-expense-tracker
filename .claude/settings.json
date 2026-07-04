@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -q 'gh pr create' && printf '{\"systemMessage\":\"Docs check: confirm SPEC.md, README.md and CLAUDE.md reflect this change before merging.\",\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"Docs check: before this PR is merged, confirm SPEC.md, README.md and CLAUDE.md reflect the change; update any that drifted and push (the PR auto-updates).\"}}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}
