@@ -32,10 +32,12 @@ export function EntryForm({ onAdd, onDone }: Props) {
   const [usd, setUsd] = useState('');
   const [miles, setMiles] = useState('');
   const [rate, setRate] = useState('');
+  const [mileageManual, setMileageManual] = useState(false);
   const [payment, setPayment] = useState<Payment>('GTCC');
   const [note, setNote] = useState('');
 
   const isMileage = category === 'MILEAGE';
+  const useCalculator = isMileage && !mileageManual;
   const milesNum = parseAmount(miles);
   const rateNum = parseAmount(rate);
   const mileageUsd =
@@ -43,8 +45,8 @@ export function EntryForm({ onAdd, onDone }: Props) {
       ? mileageAmountUsd(milesNum, rateNum)
       : null;
 
-  const amountGbp = isMileage ? null : parseAmount(gbp);
-  const amountUsd = isMileage ? mileageUsd : parseAmount(usd);
+  const amountGbp = useCalculator ? null : parseAmount(gbp);
+  const amountUsd = useCalculator ? mileageUsd : parseAmount(usd);
   const canSave = amountGbp != null || amountUsd != null;
 
   function save(thenDone: boolean) {
@@ -57,8 +59,8 @@ export function EntryForm({ onAdd, onDone }: Props) {
       payment,
       note: note.trim(),
       entered: false, // new expenses haven't been keyed into DTS yet
-      miles: isMileage ? milesNum : null,
-      rate: isMileage ? rateNum : null,
+      miles: useCalculator ? milesNum : null,
+      rate: useCalculator ? rateNum : null,
     });
     setGbp('');
     setUsd('');
@@ -98,7 +100,19 @@ export function EntryForm({ onAdd, onDone }: Props) {
         </select>
       </label>
 
-      {isMileage ? (
+      {isMileage && (
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() => setMileageManual((m) => !m)}
+        >
+          {mileageManual
+            ? 'Use miles × rate calculator instead'
+            : 'Enter USD manually instead'}
+        </button>
+      )}
+
+      {useCalculator ? (
         <>
           <div className="field-row">
             <label className="field">
@@ -204,7 +218,7 @@ export function EntryForm({ onAdd, onDone }: Props) {
           Save &amp; view list
         </button>
       </div>
-      {!canSave && !isMileage && (
+      {!canSave && !useCalculator && (
         <p className="muted small">Enter a GBP or USD amount to save.</p>
       )}
     </form>

@@ -88,11 +88,13 @@ summation. The total chains across every segment.
 Stays a normal itemized expense — unlike M&IE, DTS shows each mileage leg as
 its own line, so each leg needs to remain an individually comparable row
 (editable, "entered in DTS" toggle, shows in the List) rather than a single
-computed total. The itemized form's USD field is replaced by a **miles × rate
-calculator** when MILEAGE is selected: `amount_usd` is derived from `miles`
-and `rate` (USD/mile) at entry/edit time, but stays independently editable
-afterward. The rate persists across saves (usually one rate per trip); miles
-resets per entry. Still uses its own GTCC/personal toggle, same as before.
+computed total. Selecting MILEAGE defaults the itemized form to a **miles ×
+rate calculator**: `amount_usd` is derived from `miles` and `rate` (USD/mile)
+at entry/edit time, but stays independently editable afterward. The rate
+persists across saves (usually one rate per trip); miles resets per entry. A
+toggle switches to manual USD/GBP entry and back, for the rare case the
+calculator doesn't fit (e.g. a lump mileage reimbursement already known).
+Still uses its own GTCC/personal toggle, same as before.
 
 ## Totals / reconciliation view
 

@@ -21,7 +21,8 @@ product spec.
   USD only, always counted toward the Personal account.
 - **MILEAGE calculator** — miles × rate computes the USD amount, but (unlike
   M&IE) each leg stays its own itemized row, since DTS shows mileage
-  leg-by-leg rather than as one lump total.
+  leg-by-leg rather than as one lump total. A toggle switches to manual
+  USD/GBP entry when the calculator doesn't fit.
 - **DTS reconciliation** — enter the USD totals DTS shows per category and per
   account (GTCC/Personal reimbursement); the app flags mismatches with a signed
   delta, and separately flags a row as **"incomplete"** (yellow) if any of its

@@ -87,15 +87,20 @@ npm test           # vitest run
    entries at the expense level (the List), not here.
 9. **MILEAGE stays itemized — it is not M&IE.** DTS shows each mileage leg as
    its own line, so (unlike M&IE's single computed total) each leg must remain
-   an individually comparable `Expense` row. The Entry/List forms swap the
-   plain USD field for a **miles × rate calculator** when `MILEAGE` is
-   selected (`Expense.miles`/`.rate`, USD/mile); `amount_usd` is derived at
-   entry/edit time via `mileageAmountUsd` but is an ordinary field afterward —
-   editing it directly doesn't require touching miles/rate. `miles`/`rate` are
-   plain optional-by-convention fields on `Expense` (nullable, like
-   `amount_gbp`/`amount_usd`), not type-enforced to MILEAGE only. GBP is forced
-   null for MILEAGE rows (no receipt currency concept for a computed mileage
-   allowance); the GTCC/personal toggle stays, unlike M&IE.
+   an individually comparable `Expense` row. The Entry/List forms default the
+   plain USD field to a **miles × rate calculator** when `MILEAGE` is selected
+   (`Expense.miles`/`.rate`, USD/mile); `amount_usd` is derived at entry/edit
+   time via `mileageAmountUsd` but is an ordinary field afterward — editing it
+   directly doesn't require touching miles/rate. A link toggle
+   (`mileageManual` state) switches to plain GBP/USD entry and back — manual
+   entry must stay available (issue #8), the calculator is a default, not a
+   replacement. `EditRow` picks its initial mode from the row's data: has
+   `miles` → calculator, `miles == null` → manual (covers legacy rows too).
+   `miles`/`rate` are plain optional-by-convention fields on `Expense`
+   (nullable, like `amount_gbp`/`amount_usd`), not type-enforced to MILEAGE
+   only. GBP is forced null only while the calculator is active (no receipt
+   currency concept for a computed mileage allowance); the GTCC/personal
+   toggle stays, unlike M&IE.
 
 ## Export contract
 

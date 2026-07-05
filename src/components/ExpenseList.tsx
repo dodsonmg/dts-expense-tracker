@@ -163,11 +163,17 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
   const [usd, setUsd] = useState(expense.amount_usd?.toString() ?? '');
   const [miles, setMiles] = useState(expense.miles?.toString() ?? '');
   const [rate, setRate] = useState(expense.rate?.toString() ?? '');
+  // A row saved by the calculator (has miles) reopens in calculator mode; a
+  // manually-entered or legacy row reopens in manual mode.
+  const [mileageManual, setMileageManual] = useState(
+    expense.category === 'MILEAGE' && expense.miles == null,
+  );
   const [payment, setPayment] = useState<Payment>(expense.payment);
   const [note, setNote] = useState(expense.note);
   const [entered, setEntered] = useState(isEntered(expense));
 
   const isMileage = category === 'MILEAGE';
+  const useCalculator = isMileage && !mileageManual;
   const milesNum = parseAmount(miles);
   const rateNum = parseAmount(rate);
   const mileageUsd =
@@ -198,7 +204,18 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
           ))}
         </select>
       </label>
-      {isMileage ? (
+      {isMileage && (
+        <button
+          type="button"
+          className="link-btn"
+          onClick={() => setMileageManual((m) => !m)}
+        >
+          {mileageManual
+            ? 'Use miles × rate calculator instead'
+            : 'Enter USD manually instead'}
+        </button>
+      )}
+      {useCalculator ? (
         <>
           <div className="field-row">
             <label className="field">
@@ -295,13 +312,13 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
             onSave({
               date,
               category,
-              amount_gbp: isMileage ? null : parseAmount(gbp),
-              amount_usd: isMileage ? mileageUsd : parseAmount(usd),
+              amount_gbp: useCalculator ? null : parseAmount(gbp),
+              amount_usd: useCalculator ? mileageUsd : parseAmount(usd),
               payment,
               note: note.trim(),
               entered,
-              miles: isMileage ? milesNum : null,
-              rate: isMileage ? rateNum : null,
+              miles: useCalculator ? milesNum : null,
+              rate: useCalculator ? rateNum : null,
             })
           }
         >
