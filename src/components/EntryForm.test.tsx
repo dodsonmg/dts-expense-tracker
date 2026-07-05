@@ -111,4 +111,44 @@ describe('EntryForm — MILEAGE calculator', () => {
     expect(screen.getByLabelText(/GBP/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/USD \(DTS\)/i)).toBeInTheDocument();
   });
+
+  it('offers a manual-entry toggle that switches back to plain GBP/USD fields', async () => {
+    const user = userEvent.setup();
+    render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
+
+    await user.selectOptions(screen.getByLabelText('Category'), 'MILEAGE');
+    await user.click(
+      screen.getByRole('button', { name: 'Enter USD manually instead' }),
+    );
+
+    expect(screen.queryByLabelText('Miles')).toBeNull();
+    expect(screen.getByLabelText(/GBP/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/USD \(DTS\)/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Use miles × rate calculator instead' }),
+    ).toBeInTheDocument();
+  });
+
+  it('submits typed GBP/USD with null miles/rate in manual mode', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<EntryForm onAdd={onAdd} onDone={vi.fn()} />);
+
+    await user.selectOptions(screen.getByLabelText('Category'), 'MILEAGE');
+    await user.click(
+      screen.getByRole('button', { name: 'Enter USD manually instead' }),
+    );
+    await user.type(screen.getByLabelText(/USD \(DTS\)/i), '50');
+    await user.click(screen.getByRole('button', { name: /save & add another/i }));
+
+    expect(onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'MILEAGE',
+        amount_gbp: null,
+        amount_usd: 50,
+        miles: null,
+        rate: null,
+      }),
+    );
+  });
 });

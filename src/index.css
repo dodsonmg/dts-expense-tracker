@@ -232,6 +232,18 @@ select:focus {
   padding: 1rem;
   font-size: 1.05rem;
 }
+/* Inline mode-switch affordance (e.g. MILEAGE calculator <-> manual entry). */
+.link-btn {
+  align-self: flex-start;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* ---- List ---- */
 .filters {

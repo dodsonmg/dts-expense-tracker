@@ -213,4 +213,60 @@ describe('ExpenseList — MILEAGE calculator', () => {
     expect(screen.getByLabelText(/^USD$/i)).toBeInTheDocument();
     expect(screen.queryByLabelText('Miles')).toBeNull();
   });
+
+  it('defaults to manual mode for a MILEAGE row with no miles set (legacy/manual entry)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ExpenseList
+        expenses={[
+          exp({ id: 'a', category: 'MILEAGE', amount_usd: 50, miles: null, rate: null }),
+        ]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('MILEAGE'));
+    expect(screen.getByLabelText(/^GBP$/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Miles')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Use miles × rate calculator instead' }),
+    ).toBeInTheDocument();
+  });
+
+  it('toggles between calculator and manual mode and saves accordingly', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    render(
+      <ExpenseList
+        expenses={[
+          exp({
+            id: 'a',
+            category: 'MILEAGE',
+            amount_usd: 28.14,
+            miles: 42,
+            rate: 0.67,
+          }),
+        ]}
+        onUpdate={onUpdate}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('MILEAGE'));
+    await user.click(
+      screen.getByRole('button', { name: 'Enter USD manually instead' }),
+    );
+    expect(screen.queryByLabelText('Miles')).toBeNull();
+
+    const usd = screen.getByLabelText(/^USD$/i);
+    await user.clear(usd);
+    await user.type(usd, '99');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      'a',
+      expect.objectContaining({ amount_usd: 99, miles: null, rate: null }),
+    );
+  });
 });
