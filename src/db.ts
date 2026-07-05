@@ -24,8 +24,14 @@ const KEYS = {
 export async function loadExpenses(): Promise<Expense[]> {
   const stored = (await store.getItem<Expense[]>(KEYS.expenses)) ?? [];
   // Normalize rows saved before a field was added: default `entered` for
-  // legacy rows persisted without it (undefined -> false).
-  return stored.map((e) => ({ ...e, entered: e.entered ?? false }));
+  // legacy rows persisted without it (undefined -> false), same for the
+  // mileage calculator's miles/rate (undefined -> null).
+  return stored.map((e) => ({
+    ...e,
+    entered: e.entered ?? false,
+    miles: e.miles ?? null,
+    rate: e.rate ?? null,
+  }));
 }
 
 export async function saveExpenses(expenses: Expense[]): Promise<void> {

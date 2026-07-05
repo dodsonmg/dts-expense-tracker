@@ -16,6 +16,8 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   payment: 'GTCC',
   note: '',
   entered: false,
+  miles: null,
+  rate: null,
   ...over,
 });
 

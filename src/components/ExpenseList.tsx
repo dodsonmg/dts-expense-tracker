@@ -8,6 +8,7 @@ import {
   type Payment,
 } from '../types';
 import { money } from '../lib/format';
+import { describeMileage, mileageAmountUsd } from '../lib/mileage';
 
 interface Props {
   expenses: Expense[];
@@ -124,6 +125,13 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
                     <span className="row__amounts">
                       {money(e.amount_gbp, 'GBP')} · {money(e.amount_usd, 'USD')}
                     </span>
+                    {e.category === 'MILEAGE' &&
+                      e.miles != null &&
+                      e.rate != null && (
+                        <span className="row__sub">
+                          {describeMileage(e.miles, e.rate)}
+                        </span>
+                      )}
                     <span className="row__sub">
                       {e.date} · {e.payment === 'GTCC' ? 'GTCC' : 'Personal'}
                       {isUsdPending(e) && (
@@ -153,9 +161,19 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
   const [category, setCategory] = useState<ItemizedCategory>(expense.category);
   const [gbp, setGbp] = useState(expense.amount_gbp?.toString() ?? '');
   const [usd, setUsd] = useState(expense.amount_usd?.toString() ?? '');
+  const [miles, setMiles] = useState(expense.miles?.toString() ?? '');
+  const [rate, setRate] = useState(expense.rate?.toString() ?? '');
   const [payment, setPayment] = useState<Payment>(expense.payment);
   const [note, setNote] = useState(expense.note);
   const [entered, setEntered] = useState(isEntered(expense));
+
+  const isMileage = category === 'MILEAGE';
+  const milesNum = parseAmount(miles);
+  const rateNum = parseAmount(rate);
+  const mileageUsd =
+    milesNum != null && rateNum != null
+      ? mileageAmountUsd(milesNum, rateNum)
+      : null;
 
   return (
     <li className="row row--edit">
@@ -180,30 +198,64 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
           ))}
         </select>
       </label>
-      <div className="field-row">
-        <label className="field">
-          <span>GBP</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            value={gbp}
-            onChange={(e) => setGbp(e.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>USD</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            value={usd}
-            onChange={(e) => setUsd(e.target.value)}
-          />
-        </label>
-      </div>
+      {isMileage ? (
+        <>
+          <div className="field-row">
+            <label className="field">
+              <span>Miles</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="0"
+                value={miles}
+                onChange={(e) => setMiles(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Rate (USD/mi)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.001"
+                min="0"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+              />
+            </label>
+          </div>
+          <p className="muted small">
+            {mileageUsd != null
+              ? `= ${money(mileageUsd, 'USD')}`
+              : 'Enter miles and a rate to compute the USD amount.'}
+          </p>
+        </>
+      ) : (
+        <div className="field-row">
+          <label className="field">
+            <span>GBP</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={gbp}
+              onChange={(e) => setGbp(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>USD</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={usd}
+              onChange={(e) => setUsd(e.target.value)}
+            />
+          </label>
+        </div>
+      )}
       <div className="field">
         <span>Payment</span>
         <div className="toggle">
@@ -243,11 +295,13 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
             onSave({
               date,
               category,
-              amount_gbp: parseAmount(gbp),
-              amount_usd: parseAmount(usd),
+              amount_gbp: isMileage ? null : parseAmount(gbp),
+              amount_usd: isMileage ? mileageUsd : parseAmount(usd),
               payment,
               note: note.trim(),
               entered,
+              miles: isMileage ? milesNum : null,
+              rate: isMileage ? rateNum : null,
             })
           }
         >

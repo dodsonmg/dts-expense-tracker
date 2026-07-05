@@ -11,6 +11,8 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   payment: 'GTCC',
   note: '',
   entered: false,
+  miles: null,
+  rate: null,
   ...over,
 });
 
@@ -35,8 +37,8 @@ describe('buildCsv', () => {
     const line = csv
       .split('\r\n')
       .find((l) => l.startsWith('2026-07-01'))!;
-    // date,category,gbp,usd,payment,usd_pending,entered_in_dts,note
-    expect(line).toBe('2026-07-01,LODGING,80.00,,GTCC,yes,,');
+    // date,category,gbp,usd,payment,usd_pending,entered_in_dts,miles,rate,note
+    expect(line).toBe('2026-07-01,LODGING,80.00,,GTCC,yes,,,,');
   });
 
   it('flags USD-pending rows (GBP present, USD absent)', () => {
@@ -47,8 +49,8 @@ describe('buildCsv', () => {
   it('does not flag rows once USD is filled in', () => {
     const csv = buildCsv([exp({ amount_gbp: 5, amount_usd: 6 })], []);
     const line = csv.split('\r\n').find((l) => l.startsWith('2026-07-01'))!;
-    // ...payment,usd_pending(blank),entered_in_dts(blank),note(blank)
-    expect(line.endsWith(',GTCC,,,')).toBe(true);
+    // ...payment,usd_pending(blank),entered_in_dts(blank),miles(blank),rate(blank),note(blank)
+    expect(line.endsWith(',GTCC,,,,,')).toBe(true);
   });
 
   it('has an entered_in_dts column and flags entered rows', () => {
@@ -68,6 +70,26 @@ describe('buildCsv', () => {
     // entered_in_dts is the 7th column (index 6)
     expect(rows[0].split(',')[6]).toBe('yes');
     expect(rows[1].split(',')[6]).toBe('');
+  });
+
+  it('includes miles/rate for a MILEAGE row, blank for other categories', () => {
+    const csv = buildCsv(
+      [
+        exp({
+          id: 'a',
+          category: 'MILEAGE',
+          amount_usd: 28.14,
+          miles: 42,
+          rate: 0.67,
+        }),
+        exp({ id: 'b', category: 'LODGING', amount_usd: 100 }),
+      ],
+      [],
+    );
+    const rows = csv.split('\r\n').filter((l) => l.startsWith('2026-07-01'));
+    // date,category,gbp,usd,payment,usd_pending,entered_in_dts,miles,rate,note
+    expect(rows[0].split(',').slice(7, 9)).toEqual(['42', '0.67']);
+    expect(rows[1].split(',').slice(7, 9)).toEqual(['', '']);
   });
 
   it('escapes commas and quotes in notes', () => {

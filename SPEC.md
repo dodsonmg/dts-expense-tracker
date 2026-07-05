@@ -85,9 +85,14 @@ The `location` field is a per-segment label for readability; it does not enter t
 summation. The total chains across every segment.
 
 ### MILEAGE
-Manual USD/GBP amount entry via the normal itemized expense form for now
-(uses its own GTCC/personal toggle). A miles × rate calculator is deferred to
-Phase 3.
+Stays a normal itemized expense — unlike M&IE, DTS shows each mileage leg as
+its own line, so each leg needs to remain an individually comparable row
+(editable, "entered in DTS" toggle, shows in the List) rather than a single
+computed total. The itemized form's USD field is replaced by a **miles × rate
+calculator** when MILEAGE is selected: `amount_usd` is derived from `miles`
+and `rate` (USD/mile) at entry/edit time, but stays independently editable
+afterward. The rate persists across saves (usually one rate per trip); miles
+resets per entry. Still uses its own GTCC/personal toggle, same as before.
 
 ## Totals / reconciliation view
 
@@ -153,7 +158,9 @@ Two tables, GBP and USD kept separate throughout:
 8. Multiple trips; per-trip export.
 9. PWA install/offline polish.
 10. Backup/restore all data as a file.
-11. Optional MILEAGE calculator (miles × rate).
+11. ~~Optional MILEAGE calculator (miles × rate).~~ **Done** — see § MILEAGE.
+    MILEAGE stayed itemized (not M&IE-style) so each leg is still individually
+    comparable against DTS; the calculator is an input convenience only.
 
 **Phase 4 — nice-to-haves**
 12. Receipt photos.

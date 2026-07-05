@@ -11,6 +11,8 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   payment: 'GTCC',
   note: '',
   entered: false,
+  miles: null,
+  rate: null,
   ...over,
 });
 
@@ -66,6 +68,18 @@ describe('buildReport', () => {
     const personal = r.accounts.find((a) => a.account === 'personal')!;
     expect(gtcc.usdPendingCount).toBe(1);
     expect(personal.usdPendingCount).toBe(0);
+  });
+
+  it('passes through miles/rate for MILEAGE rows, null for others', () => {
+    const r = buildReport(
+      [
+        exp({ category: 'MILEAGE', amount_usd: 28.14, miles: 42, rate: 0.67 }),
+        exp({ category: 'LODGING', amount_usd: 100 }),
+      ],
+      [],
+    );
+    expect(r.expenses[0]).toMatchObject({ miles: 42, rate: 0.67 });
+    expect(r.expenses[1]).toMatchObject({ miles: null, rate: null });
   });
 
   it('computes segment totals and the M&IE total/row', () => {

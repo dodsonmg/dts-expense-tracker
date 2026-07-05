@@ -11,6 +11,8 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   payment: 'GTCC',
   note: '',
   entered: false,
+  miles: null,
+  rate: null,
   ...over,
 });
 
@@ -32,7 +34,7 @@ function findRow(
   let found: (string | number | null)[] | undefined;
   ws.eachRow((row) => {
     if (row.getCell(1).value === firstCell) {
-      found = [1, 2, 3, 4, 5, 6, 7, 8].map(
+      found = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
         (i) => row.getCell(i).value as string | number | null,
       );
     }
@@ -116,5 +118,29 @@ describe('buildXlsx', () => {
     // Expenses sheet: USD pending column (column 6) is flagged
     const raw = findRow(wb, 'Expenses', '2026-07-01');
     expect(raw?.[5]).toBe('yes');
+  });
+
+  it('adds Miles/Rate columns to the Expenses sheet, populated only for MILEAGE rows', async () => {
+    const buf = await buildXlsx(
+      [
+        exp({
+          id: 'a',
+          category: 'MILEAGE',
+          amount_usd: 28.14,
+          miles: 42,
+          rate: 0.67,
+          note: 'leg 1',
+        }),
+      ],
+      [],
+    );
+    const wb = await readBack(buf);
+
+    // Expenses sheet: date, category, gbp, usd, payment, usd_pending,
+    // entered, miles, rate, note -> indices 0-9
+    const raw = findRow(wb, 'Expenses', '2026-07-01');
+    expect(raw?.[7]).toBe(42); // Miles
+    expect(raw?.[8]).toBe(0.67); // Rate
+    expect(raw?.[9]).toBe('leg 1'); // Note still lands correctly after the shift
   });
 });

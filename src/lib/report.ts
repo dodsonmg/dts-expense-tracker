@@ -29,6 +29,8 @@ export interface ReportExpenseRow {
   usdPending: boolean;
   entered: boolean;
   note: string;
+  miles: number | null; // MILEAGE calculator inputs; null for every other category
+  rate: number | null;
 }
 
 export interface ReportSegmentRow {
@@ -90,6 +92,8 @@ export function buildReport(
       usdPending: isUsdPending(e),
       entered: isEntered(e),
       note: e.note,
+      miles: e.miles,
+      rate: e.rate,
     })),
     segments: segments.map((s) => ({
       location: s.location,
