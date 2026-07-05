@@ -54,6 +54,14 @@ Key selectors (all accessible-name based; the tab bar's icon glyphs are
   category via `page.locator('select')` + `.selectOption('TRANSPORT')`,
   payment via `page.locator('.toggle__opt', { hasText: 'Personal' }).click()`.
   Save with `getByRole('button', { name: 'Save & view list' })`.
+- MILEAGE category: selecting it swaps the GBP/USD fields for
+  `getByLabel('Miles')` + `getByLabel(/Rate/i)` (a calculator, on by
+  default) and shows a `getByRole('button', { name: 'Enter USD manually
+  instead' })` toggle — click it to get plain GBP/USD fields back (the
+  toggle's label flips to `'Use miles × rate calculator instead'`). Applies
+  the same way in `ExpenseList`'s `EditRow`. The List row shows a
+  `"<miles> mi @ $<rate>/mi"` sub-line (e.g. `42.0 mi @ $0.670/mi`) only when
+  the row has stored miles/rate — a manually-entered mileage row has none.
 - Totals inputs: `getByLabel('DTS USD total for LODGING')`,
   `getByLabel('DTS USD reimbursement for GTCC')` (also `Personal`).
 - Recon row state: `page.$$eval('.recon__row', els => els.map(el =>
