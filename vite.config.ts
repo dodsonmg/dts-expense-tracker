@@ -28,10 +28,13 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           {
-            src: 'pwa-512x512.png',
+            // Distinct asset, not a reuse of the "any" icon above: maskable
+            // icons get clipped to an OS-specific shape, so the artwork must
+            // sit in a safe zone with real padding (see gen-icons.mjs).
+            src: 'pwa-512x512-maskable.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

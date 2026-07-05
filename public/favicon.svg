@@ -1,6 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#1f2933" />
-  <rect x="14" y="14" width="36" height="36" rx="6" fill="#5dbcd2" />
-  <text x="32" y="39" font-family="system-ui, sans-serif" font-size="20"
-        font-weight="700" text-anchor="middle" fill="#1f2933">$</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="18" fill="#1f2933" />
+  <g>
+  <ellipse cx="30" cy="86" rx="6" ry="4" fill="#e8cda3" />
+  <ellipse cx="48" cy="88" rx="6" ry="4" fill="#e8cda3" />
+  <ellipse cx="66" cy="85" rx="6" ry="4" fill="#e8cda3" />
+  <ellipse cx="46" cy="60" rx="30" ry="23" fill="#a56a3a" />
+  <path d="M 72,58 Q 90,55 92,63 Q 90,70 72,68 Z" fill="#e8cda3" />
+  <circle cx="90" cy="62" r="2.6" fill="#2a1a10" />
+  <circle cx="70" cy="49" r="2.3" fill="#2a1a10" />
+  <polygon points="18.1,51.0 16.0,57.1 4.8,49.8" fill="#6b4423" />
+  <polygon points="21.3,46.6 17.7,51.9 8.8,41.8" fill="#7a4e28" />
+  <polygon points="25.7,42.8 20.9,47.1 14.7,35.2" fill="#6b4423" />
+  <polygon points="31.1,39.9 25.5,43.0 21.9,30.1" fill="#7a4e28" />
+  <polygon points="37.2,37.9 31.1,39.9 30.0,26.5" fill="#6b4423" />
+  <polygon points="43.7,36.9 37.4,37.8 38.8,24.5" fill="#7a4e28" />
+  <polygon points="50.5,37.1 44.1,36.9 47.7,24.0" fill="#6b4423" />
+  <polygon points="57.1,38.5 50.8,37.2 56.7,25.1" fill="#7a4e28" />
+  <polygon points="63.2,41.0 57.3,38.5 65.2,27.7" fill="#6b4423" />
+  <polygon points="68.4,44.5 63.1,40.9 73.0,31.9" fill="#7a4e28" />
+  <polygon points="72.5,48.9 68.1,44.2 79.8,37.6" fill="#6b4423" />
+  <polygon points="75.2,53.8 72.1,48.2 85.0,44.8" fill="#7a4e28" />
+  <polygon points="76.3,59.1 74.8,52.9 88.2,53.1" fill="#6b4423" />
+</g>
 </svg>

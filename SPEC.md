@@ -116,6 +116,7 @@ Two tables, GBP and USD kept separate throughout:
 4. **Totals** — by category and by account, GBP/USD separate, M&IE folded in (USD,
    Personal).
 5. **Export** — one tap → CSV (raw rows + totals block) to email to self.
+6. **Help** — static install steps + FAQ; the only screen with no live trip data.
 
 ## Tech stack
 
@@ -158,7 +159,11 @@ Two tables, GBP and USD kept separate throughout:
 
 **Phase 3 — multi-trip + robustness**
 8. Multiple trips; per-trip export.
-9. PWA install/offline polish.
+9. ~~PWA install/offline polish.~~ **Done** — app icon (hedgehog, replacing the
+   placeholder), an update-available/offline-ready toast (`registerType:
+   'autoUpdate'` was previously silent — a tab already open had no way to know
+   an update had shipped), and a Help tab (install steps + FAQ covering the
+   domain concepts above). iOS meta tags and the manifest were already solid.
 10. Backup/restore all data as a file.
 11. ~~Optional MILEAGE calculator (miles × rate).~~ **Done** — see § MILEAGE.
     MILEAGE stayed itemized (not M&IE-style) so each leg is still individually

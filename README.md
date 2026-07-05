@@ -34,7 +34,11 @@ product spec.
   Shared via the iOS share sheet (Mail) or downloaded; both usable as
   standalone spreadsheets.
 - **Installable & offline** — "Add to Home Screen"; works with no signal after
-  first load.
+  first load. A dismissible toast surfaces when an update is ready to reload,
+  or when the app is confirmed ready to work offline.
+- **Help tab** — install steps plus an FAQ walking through the domain
+  concepts above (USD pending vs. incomplete vs. mismatch, M&IE vs. MILEAGE,
+  what "entered in DTS" does, and so on).
 
 ## Tech stack
 
@@ -67,7 +71,7 @@ mode). Data persists across reloads via IndexedDB.
 | `npm test` | Run the Vitest suite once |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run coverage` | Test coverage report |
-| `npm run gen-icons` | Regenerate placeholder PWA icons |
+| `npm run gen-icons` | Regenerate the app icon (hedgehog) |
 
 > **PWA note:** the service worker only runs against a built app. To test
 > install/offline behavior, run `npm run build && npm run preview` and open it
@@ -89,9 +93,11 @@ src/
     csv.ts          CSV export
     xlsx.ts         Formatted .xlsx export (ExcelJS, dynamically imported)
     format.ts       Currency + date helpers
-  components/       One file per screen (Entry, List, M&IE, Totals, Export)
+  components/       One file per screen (Entry, List, M&IE, Totals, Export,
+                    Help) + UpdateToast (update/offline-ready banner)
   App.tsx           Tab shell
-scripts/gen-icons.mjs  Dependency-free PNG icon generator
+scripts/gen-icons.mjs  Rasterizes the hedgehog SVG to every icon size
+                       (Playwright/headless Chromium)
 ```
 
 The domain invariants that keep the tool honest (currencies never summed, M&IE
@@ -125,14 +131,14 @@ VITE_BASE=/ npm run build
 CI (`.github/workflows/ci.yml`) runs lint, type-check, tests, and build on
 pushes and PRs; `deploy.yml` publishes `dist/` to Pages.
 
-Replace the placeholder PWA icons in `public/` with real artwork before
-shipping (`npm run gen-icons` regenerates the placeholders).
+The app icon is regenerated with `npm run gen-icons` (needs
+`npx playwright install chromium` once per machine — see `scripts/gen-icons.mjs`).
 
 ## Roadmap
 
 **Phase 1 (MVP)** and **Phase 2 (reconciliation)** are implemented and deployed.
 Remaining phases in [`SPEC.md`](./SPEC.md):
 
-- **Phase 3 — multi-trip + robustness:** multiple trips, backup/restore,
-  PWA/offline polish. (Mileage calculator done.)
+- **Phase 3 — multi-trip + robustness:** multiple trips, backup/restore.
+  (Mileage calculator and PWA/offline polish done.)
 - **Phase 4 — nice-to-haves:** receipt photos, interactive laptop import.
