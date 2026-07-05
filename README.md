@@ -19,6 +19,9 @@ product spec.
   is flagged **"USD pending."**
 - **M&IE per-diem calculator** — multi-segment (full/partial days × rates),
   USD only, always counted toward the Personal account.
+- **MILEAGE calculator** — miles × rate computes the USD amount, but (unlike
+  M&IE) each leg stays its own itemized row, since DTS shows mileage
+  leg-by-leg rather than as one lump total.
 - **DTS reconciliation** — enter the USD totals DTS shows per category and per
   account (GTCC/Personal reimbursement); the app flags mismatches with a signed
   delta, and separately flags a row as **"incomplete"** (yellow) if any of its
@@ -78,6 +81,7 @@ src/
   useTripData.ts    The one stateful hook (loads once, mirrors to IndexedDB)
   lib/              Pure logic, no React — unit-tested
     mie.ts          M&IE per-diem math
+    mileage.ts      MILEAGE calculator (miles × rate)
     totals.ts       By-category / by-account totals (GBP & USD separate)
     reconcile.ts    App-vs-DTS comparison (USD, cent tolerance)
     report.ts       Shared export model consumed by both exporters
@@ -129,5 +133,5 @@ shipping (`npm run gen-icons` regenerates the placeholders).
 Remaining phases in [`SPEC.md`](./SPEC.md):
 
 - **Phase 3 — multi-trip + robustness:** multiple trips, backup/restore,
-  PWA/offline polish, optional mileage calculator.
+  PWA/offline polish. (Mileage calculator done.)
 - **Phase 4 — nice-to-haves:** receipt photos, interactive laptop import.

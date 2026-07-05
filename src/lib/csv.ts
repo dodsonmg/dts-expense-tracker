@@ -24,6 +24,14 @@ function num(amount: number | null): string {
   return amount == null ? '' : amount.toFixed(2);
 }
 
+// Miles/rate audit columns (MILEAGE only): raw value, unrounded, or blank —
+// unlike num() these aren't money-formatted to 2dp, since DTS/GSA rates are
+// sometimes 3dp (e.g. $0.655/mile) and rounding would misrepresent what was
+// actually entered.
+function raw(value: number | null): string {
+  return value == null ? '' : String(value);
+}
+
 // Greppable reconciliation status for the office spreadsheet.
 function status(s: MatchStatus): string {
   return s === 'mismatch' ? 'MISMATCH' : s === 'match' ? 'ok' : '';
@@ -51,6 +59,8 @@ export function buildCsv(
       'payment',
       'usd_pending',
       'entered_in_dts',
+      'miles',
+      'rate',
       'note',
     ]),
   );
@@ -64,6 +74,8 @@ export function buildCsv(
         e.payment,
         e.usdPending ? 'yes' : '',
         e.entered ? 'yes' : '',
+        raw(e.miles),
+        raw(e.rate),
         e.note,
       ]),
     );

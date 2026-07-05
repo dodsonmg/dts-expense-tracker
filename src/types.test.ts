@@ -16,6 +16,8 @@ const exp = (gbp: number | null, usd: number | null): Expense => ({
   payment: 'GTCC',
   note: '',
   entered: false,
+  miles: null,
+  rate: null,
 });
 
 describe('categories', () => {

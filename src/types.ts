@@ -31,6 +31,11 @@ export interface Expense {
   payment: Payment;
   note: string;
   entered: boolean; // reconciliation: has this been keyed into DTS yet?
+  // Mileage calculator inputs (MILEAGE only): amount_usd is derived from
+  // miles * rate at entry/edit time but stays independently editable
+  // afterward. Null for every other category.
+  miles: number | null;
+  rate: number | null; // USD per mile
 }
 
 // DTS reports USD only, so reconciliation is USD-only throughout.

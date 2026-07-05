@@ -15,9 +15,9 @@ npm run build      # tsc -b + vite build → dist/
 npm run preview    # serve the production build (test the PWA/offline here)
 npm run typecheck  # tsc -b --noEmit
 npm run gen-icons  # regenerate placeholder PWA icons in public/
+npm run lint       # eslint .
+npm test           # vitest run
 ```
-
-There is no test runner or linter configured yet.
 
 ## Stack
 
@@ -38,6 +38,9 @@ There is no test runner or linter configured yet.
   otherwise presentational.
 - `src/lib/` — pure functions, no React:
   - `mie.ts` — M&IE per-diem math.
+  - `mileage.ts` — MILEAGE calculator: `mileageAmountUsd` (miles * rate,
+    rounded to cents) and `describeMileage` (display string, unrounded to 3dp
+    since GSA/DTS rates are sometimes $0.xx5/mile).
   - `totals.ts` — by-category and by-account totals.
   - `reconcile.ts` — compares app totals against DTS-entered totals (USD).
   - `report.ts` — one structured export model consumed by both exporters, so
@@ -82,11 +85,23 @@ There is no test runner or linter configured yet.
    (sub-half-cent gap = match/float noise, larger = mismatch). It's input, not
    truth: it never alters the computed totals. GBP receipts are matched to USD
    entries at the expense level (the List), not here.
+9. **MILEAGE stays itemized — it is not M&IE.** DTS shows each mileage leg as
+   its own line, so (unlike M&IE's single computed total) each leg must remain
+   an individually comparable `Expense` row. The Entry/List forms swap the
+   plain USD field for a **miles × rate calculator** when `MILEAGE` is
+   selected (`Expense.miles`/`.rate`, USD/mile); `amount_usd` is derived at
+   entry/edit time via `mileageAmountUsd` but is an ordinary field afterward —
+   editing it directly doesn't require touching miles/rate. `miles`/`rate` are
+   plain optional-by-convention fields on `Expense` (nullable, like
+   `amount_gbp`/`amount_usd`), not type-enforced to MILEAGE only. GBP is forced
+   null for MILEAGE rows (no receipt currency concept for a computed mileage
+   allowance); the GTCC/personal toggle stays, unlike M&IE.
 
 ## Export contract
 
-`buildCsv` emits one file: `EXPENSES` rows (with `usd_pending` and
-`entered_in_dts` flag columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
+`buildCsv` emits one file: `EXPENSES` rows (with `usd_pending`,
+`entered_in_dts`, and `miles`/`rate` — MILEAGE-only, blank elsewhere —
+columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
 then `TOTALS BY ACCOUNT`. The two totals blocks carry the DTS comparison
 (`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) and
 a `usd_incomplete` (`yes`/blank) flag, so the emailed sheet works as the
@@ -97,8 +112,9 @@ numerically against DTS.
 The formatted `.xlsx` (`buildXlsx`, ExcelJS) renders from the same `report.ts`
 model: a **Reconcile** sheet with the by-category and by-account tables at the
 top (mismatch rows red, USD-incomplete rows yellow — incomplete wins when
-both apply), then **Expenses** (raw rows, USD-pending rows yellow) and **M&IE**
-sheets. Both exporters must render from `buildReport` so they never diverge.
+both apply), then **Expenses** (raw rows, USD-pending rows yellow, Miles/Rate
+columns before Note) and **M&IE** sheets. Both exporters must render from
+`buildReport` so they never diverge.
 ExcelJS is dynamically imported; keep it out of any statically-loaded module. The export must stay
 usable as a standalone spreadsheet (it's the reconciliation view at the office,
 where phones are banned).
@@ -115,6 +131,6 @@ free PNG encoder in `scripts/`). Replace with real artwork before shipping.
 ## Roadmap
 
 MVP (this scaffold) is Phase 1. Phases 2–4 in `SPEC.md`: DTS reconciliation
-(check-off, mismatch flags, `.xlsx` export), multi-trip + backup/restore, then
-receipt photos and interactive laptop import. Don't pull that work forward
-without being asked.
+(check-off, mismatch flags, `.xlsx` export), multi-trip + backup/restore +
+MILEAGE calculator (done), then receipt photos and interactive laptop import.
+Don't pull that work forward without being asked.

@@ -120,6 +120,8 @@ export async function buildXlsx(
     { header: 'Payment', width: 10 },
     { header: 'USD pending', width: 12 },
     { header: 'Entered in DTS', width: 14 },
+    { header: 'Miles', width: 9 },
+    { header: 'Rate', width: 9 },
     { header: 'Note', width: 28 },
   ];
   exp.getRow(1).font = { bold: true };
@@ -132,12 +134,16 @@ export async function buildXlsx(
       e.payment,
       e.usdPending ? 'yes' : '',
       e.entered ? 'yes' : '',
+      e.miles,
+      e.rate,
       e.note,
     ]);
     row.getCell(3).numFmt = MONEY_FMT;
     row.getCell(4).numFmt = MONEY_FMT;
+    row.getCell(8).numFmt = '0.0';
+    row.getCell(9).numFmt = '0.000'; // DTS/GSA rates are sometimes 3dp
     if (e.usdPending) {
-      for (let i = 1; i <= 8; i++) row.getCell(i).fill = pendingFill();
+      for (let i = 1; i <= 10; i++) row.getCell(i).fill = pendingFill();
     }
   }
 

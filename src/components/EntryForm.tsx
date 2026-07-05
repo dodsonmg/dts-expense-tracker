@@ -5,14 +5,16 @@ import {
   type ItemizedCategory,
   type Payment,
 } from '../types';
-import { today } from '../lib/format';
+import { today, money } from '../lib/format';
+import { mileageAmountUsd } from '../lib/mileage';
 
 interface Props {
   onAdd: (data: Omit<Expense, 'id'>) => void;
   onDone: () => void;
 }
 
-// Parse a currency input: blank -> null, otherwise a non-negative number.
+// Parse a currency/miles/rate input: blank -> null, otherwise a non-negative
+// number.
 function parseAmount(raw: string): number | null {
   const s = raw.trim();
   if (s === '') return null;
@@ -21,17 +23,28 @@ function parseAmount(raw: string): number | null {
 }
 
 // Optimized for fast repeated entry: after saving, amounts and note clear but
-// date/category/payment persist for the next row.
+// date/category/payment persist for the next row. MILEAGE's rate also
+// persists (same rate usually applies to every leg of a trip); miles clears.
 export function EntryForm({ onAdd, onDone }: Props) {
   const [date, setDate] = useState(today);
   const [category, setCategory] = useState<ItemizedCategory>('LODGING');
   const [gbp, setGbp] = useState('');
   const [usd, setUsd] = useState('');
+  const [miles, setMiles] = useState('');
+  const [rate, setRate] = useState('');
   const [payment, setPayment] = useState<Payment>('GTCC');
   const [note, setNote] = useState('');
 
-  const amountGbp = parseAmount(gbp);
-  const amountUsd = parseAmount(usd);
+  const isMileage = category === 'MILEAGE';
+  const milesNum = parseAmount(miles);
+  const rateNum = parseAmount(rate);
+  const mileageUsd =
+    milesNum != null && rateNum != null
+      ? mileageAmountUsd(milesNum, rateNum)
+      : null;
+
+  const amountGbp = isMileage ? null : parseAmount(gbp);
+  const amountUsd = isMileage ? mileageUsd : parseAmount(usd);
   const canSave = amountGbp != null || amountUsd != null;
 
   function save(thenDone: boolean) {
@@ -44,9 +57,12 @@ export function EntryForm({ onAdd, onDone }: Props) {
       payment,
       note: note.trim(),
       entered: false, // new expenses haven't been keyed into DTS yet
+      miles: isMileage ? milesNum : null,
+      rate: isMileage ? rateNum : null,
     });
     setGbp('');
     setUsd('');
+    setMiles('');
     setNote('');
     if (thenDone) onDone();
   }
@@ -82,32 +98,68 @@ export function EntryForm({ onAdd, onDone }: Props) {
         </select>
       </label>
 
-      <div className="field-row">
-        <label className="field">
-          <span>GBP (receipt)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            value={gbp}
-            onChange={(e) => setGbp(e.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>USD (DTS)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            placeholder="pending"
-            value={usd}
-            onChange={(e) => setUsd(e.target.value)}
-          />
-        </label>
-      </div>
+      {isMileage ? (
+        <>
+          <div className="field-row">
+            <label className="field">
+              <span>Miles</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="0"
+                placeholder="0.0"
+                value={miles}
+                onChange={(e) => setMiles(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Rate (USD/mi)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.001"
+                min="0"
+                placeholder="0.000"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+              />
+            </label>
+          </div>
+          <p className="muted small">
+            {mileageUsd != null
+              ? `= ${money(mileageUsd, 'USD')}`
+              : 'Enter miles and a rate to compute the USD amount.'}
+          </p>
+        </>
+      ) : (
+        <div className="field-row">
+          <label className="field">
+            <span>GBP (receipt)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              value={gbp}
+              onChange={(e) => setGbp(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>USD (DTS)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              placeholder="pending"
+              value={usd}
+              onChange={(e) => setUsd(e.target.value)}
+            />
+          </label>
+        </div>
+      )}
 
       <div className="field">
         <span>Payment</span>
@@ -152,7 +204,7 @@ export function EntryForm({ onAdd, onDone }: Props) {
           Save &amp; view list
         </button>
       </div>
-      {!canSave && (
+      {!canSave && !isMileage && (
         <p className="muted small">Enter a GBP or USD amount to save.</p>
       )}
     </form>
