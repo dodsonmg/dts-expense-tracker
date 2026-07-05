@@ -5,6 +5,8 @@ import { ExpenseList } from './components/ExpenseList';
 import { MieView } from './components/MieView';
 import { TotalsView } from './components/TotalsView';
 import { ExportView } from './components/ExportView';
+import { UpdateToast } from './components/UpdateToast';
+import { HelpView } from './components/HelpView';
 
 const TABS = [
   { id: 'entry', label: 'Entry', icon: '＋' },
@@ -12,6 +14,7 @@ const TABS = [
   { id: 'mie', label: 'M&IE', icon: '％' },
   { id: 'totals', label: 'Totals', icon: 'Σ' },
   { id: 'export', label: 'Export', icon: '⇪' },
+  { id: 'help', label: 'Help', icon: '?' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -25,6 +28,8 @@ export default function App() {
       <header className="app__header">
         <h1>DTS Expense Tracker</h1>
       </header>
+
+      <UpdateToast />
 
       <main className="app__main">
         {!trip.loaded ? (
@@ -53,13 +58,15 @@ export default function App() {
             onSetDts={trip.setDtsExpected}
             onSetAccountDts={trip.setDtsAccountExpected}
           />
-        ) : (
+        ) : tab === 'export' ? (
           <ExportView
             expenses={trip.expenses}
             segments={trip.segments}
             expected={trip.dtsExpected}
             accountExpected={trip.dtsAccountExpected}
           />
+        ) : (
+          <HelpView />
         )}
       </main>
 

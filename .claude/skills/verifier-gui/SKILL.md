@@ -49,7 +49,10 @@ Key selectors (all accessible-name based; the tab bar's icon glyphs are
 `aria-hidden`, so the button's name is just the label):
 
 - Tabs: `page.getByRole('button', { name: 'Entry', exact: true })` — same
-  pattern for `List`, `M&IE`, `Totals`, `Export`.
+  pattern for `List`, `M&IE`, `Totals`, `Export`, `Help`.
+- Help tab: static content, no live data — `getByText('Install on your
+  iPhone')`, FAQ items are native `<details>`/`<summary>`
+  (`page.locator('details').count()`, click the `summary` text to expand).
 - Entry form: `getByLabel('GBP (receipt)')`, `getByLabel('USD (DTS)')`,
   category via `page.locator('select')` + `.selectOption('TRANSPORT')`,
   payment via `page.locator('.toggle__opt', { hasText: 'Personal' }).click()`.
@@ -88,6 +91,28 @@ const buf = fs.readFileSync(await download.path());
 CSV is readable directly (`buf.toString('utf8')`); for `.xlsx`, load it with
 `exceljs` (already a project dependency) the same way `xlsx.test.ts`'s
 `readBack` helper does.
+
+## PWA update/offline-ready toast
+
+`UpdateToast` (mounted in `App.tsx`, above the tab content) only fires for
+real off the `virtual:pwa-register/react` hook — dev mode's service worker
+behaves differently from a production build, so drive this against
+`npm run preview` (build first), not `npm run dev`. The offline-ready toast
+reliably fires ~1s after first load once the SW registers; there's no easy
+way to trigger the update-available path locally without two real deploys
+(different build hashes), so that side is best verified by code review plus
+confirming the toast renders/dismisses correctly for whichever state you can
+trigger. Text: `'Ready to work offline.'` / `'Update available.'`, dismiss
+button `getByRole('button', { name: 'Dismiss' })`.
+
+## Icon changes
+
+The app icon (`scripts/gen-icons.mjs`) is regenerated with `npm run gen-icons`
+— rerun it after touching the icon, then eyeball `public/pwa-512x512.png` and
+`public/pwa-512x512-maskable.png` directly (`Read` the PNG). To sanity-check
+the maskable variant's safe-zone padding, clip it to a circle/hexagon in a
+throwaway HTML page (`clip-path` or a rounded `overflow:hidden` div) and
+screenshot — don't trust the safe-zone math unverified.
 
 ## Cleanup
 

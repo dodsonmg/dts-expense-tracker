@@ -55,6 +55,30 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* ---- PWA update/offline-ready banner ---- */
+.update-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.update-toast .btn {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.7rem;
+}
+.update-toast__dismiss {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+}
+
 .app__main {
   flex: 1;
   padding: 1rem;
@@ -382,6 +406,23 @@ select:focus {
 .total-bar strong {
   font-variant-numeric: tabular-nums;
   color: var(--accent);
+}
+
+/* ---- Help/FAQ ---- */
+.help-steps {
+  margin: 0.6rem 0;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.card summary {
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.card summary + p {
+  margin: 0.6rem 0 0;
 }
 
 /* ---- Totals tables ---- */
