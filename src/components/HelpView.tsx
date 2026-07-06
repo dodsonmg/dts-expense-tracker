@@ -7,6 +7,10 @@
 // so re-read it when either changes.
 const FAQS: { q: string; a: string }[] = [
   {
+    q: 'What’s the expected workflow?',
+    a: 'Capture expenses as they happen on the Entry tab — plus M&IE per-diem and MILEAGE legs on their own tabs. As charges land in DTS, check them off on the List tab. At the end of the trip, read DTS’s own totals and type them into the Totals tab to reconcile. Then export the formatted spreadsheet to bring to the office.',
+  },
+  {
     q: 'Why aren’t GBP and USD ever added together?',
     a: 'They’re different things: GBP is what the receipt says at the time of purchase, USD is what actually lands on the card (or what DTS reimburses). No conversion happens anywhere in the app — totals always keep the two currencies in separate columns.',
   },

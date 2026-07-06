@@ -20,4 +20,10 @@ describe('HelpView', () => {
       screen.getByText('What does the "entered in DTS" checkbox actually do?'),
     ).toBeInTheDocument();
   });
+
+  it('shows the workflow overview as the first FAQ item', () => {
+    render(<HelpView />);
+    const items = document.querySelectorAll('details summary');
+    expect(items[0].textContent).toBe('What’s the expected workflow?');
+  });
 });
