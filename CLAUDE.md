@@ -48,6 +48,11 @@ npm test           # vitest run
   - `csv.ts` — CSV export document.
   - `xlsx.ts` — formatted `.xlsx` (ExcelJS, dynamically imported to stay out of
     the main bundle).
+  - `backup.ts` — whole-state JSON backup/restore: `buildBackup` (all
+    expenses/segments/DTS totals + a `version` field), `parseBackup`
+    (structural validation, throws `BackupParseError` with a user-presentable
+    message on anything malformed). Distinct from `csv.ts`/`xlsx.ts`, which are
+    lossy office-facing views — this round-trips everything `db.ts` persists.
   - `format.ts` — currency + date helpers.
   - `pwaRegister.ts` — re-exports `useRegisterSW` from
     `virtual:pwa-register/react`. Exists purely so tests can `vi.mock` a real
@@ -108,6 +113,14 @@ npm test           # vitest run
    only. GBP is forced null only while the calculator is active (no receipt
    currency concept for a computed mileage allowance); the GTCC/personal
    toggle stays, unlike M&IE.
+10. **Backup restore is replace-only, never a merge.** There's no multi-trip
+    yet, and `DtsExpected`/`DtsAccountExpected` are per-category/account
+    singletons with no sensible merge rule (which number wins?), so restoring
+    a backup always replaces every field `db.ts` persists — same mental model
+    as restoring a phone from a backup. `useTripData.restoreAll` is the only
+    way to bulk-replace state (vs. the one-at-a-time add/update/delete
+    setters); `ExportView` gates it behind a confirmation card showing counts
+    before calling it, since it's otherwise irreversible.
 
 ## Export contract
 
@@ -164,7 +177,7 @@ the same file as a plain icon.
 ## Roadmap
 
 MVP (this scaffold) is Phase 1. Phases 2–4 in `SPEC.md`: DTS reconciliation
-(check-off, mismatch flags, `.xlsx` export), multi-trip + backup/restore +
-MILEAGE calculator (done) + PWA install/offline polish (done — icon, update
-toast, Help/FAQ tab), then receipt photos and interactive laptop import.
-Don't pull that work forward without being asked.
+(check-off, mismatch flags, `.xlsx` export), multi-trip + backup/restore
+(done — see below) + MILEAGE calculator (done) + PWA install/offline polish
+(done — icon, update toast, Help/FAQ tab), then receipt photos and
+interactive laptop import. Don't pull that work forward without being asked.

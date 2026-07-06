@@ -118,6 +118,23 @@ export function useTripData() {
     [],
   );
 
+  // Replaces the entire trip with a restored backup (issue #7) — not a merge.
+  // Each setter's own effect persists it to IndexedDB, same as any other change.
+  const restoreAll = useCallback(
+    (data: {
+      expenses: Expense[];
+      segments: MieSegment[];
+      dtsExpected: DtsExpected;
+      dtsAccountExpected: DtsAccountExpected;
+    }) => {
+      setExpenses(data.expenses);
+      setSegments(data.segments);
+      setDtsExpectedState(data.dtsExpected);
+      setDtsAccountExpectedState(data.dtsAccountExpected);
+    },
+    [],
+  );
+
   return {
     loaded,
     expenses,
@@ -132,6 +149,7 @@ export function useTripData() {
     deleteSegment,
     setDtsExpected,
     setDtsAccountExpected,
+    restoreAll,
   };
 }
 

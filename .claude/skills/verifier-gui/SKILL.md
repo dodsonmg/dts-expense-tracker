@@ -92,6 +92,20 @@ CSV is readable directly (`buf.toString('utf8')`); for `.xlsx`, load it with
 `exceljs` (already a project dependency) the same way `xlsx.test.ts`'s
 `readBack` helper does.
 
+## Backup / restore
+
+Also on the Export tab, below the CSV/xlsx buttons, in a "Backup" card:
+`getByRole('button', { name: 'Download backup (JSON)' })` (same download-event
+capture as above; it's JSON, readable directly) and `getByRole('button', {
+name: 'Restore from backup…' })`, which just clicks a hidden `input[type=file]`
+— set the file directly rather than clicking the button:
+`page.locator('input[type="file"]').setInputFiles(path)`. That shows a
+confirmation card (`text=/This will replace/`) with counts; only
+`getByRole('button', { name: 'Replace all data' })` actually calls
+`onRestore`, `getByRole('button', { name: 'Cancel' })` discards it. An invalid
+file shows an inline error (e.g. `text=/Not a valid JSON file/`) and never
+renders the confirmation card.
+
 ## PWA update/offline-ready toast
 
 `UpdateToast` (mounted in `App.tsx`, above the tab content) only fires for

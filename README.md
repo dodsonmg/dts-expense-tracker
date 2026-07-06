@@ -33,6 +33,10 @@ product spec.
   top and raw rows behind, plus a plain **CSV** (`usd_incomplete` column).
   Shared via the iOS share sheet (Mail) or downloaded; both usable as
   standalone spreadsheets.
+- **Backup/restore** — a single JSON file with everything on the device
+  (expenses, M&IE segments, DTS totals), for moving to a new phone. Restoring
+  **replaces** the device's data; a confirmation step shows what will be
+  replaced before it happens.
 - **Installable & offline** — "Add to Home Screen"; works with no signal after
   first load. A dismissible toast surfaces when an update is ready to reload,
   or when the app is confirmed ready to work offline.
@@ -92,6 +96,7 @@ src/
     report.ts       Shared export model consumed by both exporters
     csv.ts          CSV export
     xlsx.ts         Formatted .xlsx export (ExcelJS, dynamically imported)
+    backup.ts       Whole-state JSON backup/restore (build/parse + validate)
     format.ts       Currency + date helpers
   components/       One file per screen (Entry, List, M&IE, Totals, Export,
                     Help) + UpdateToast (update/offline-ready banner)

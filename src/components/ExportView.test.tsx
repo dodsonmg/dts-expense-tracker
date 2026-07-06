@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportView } from './ExportView';
 import type { Expense } from '../types';
+import { buildBackup } from '../lib/backup';
 
 const exp = (over: Partial<Expense> = {}): Expense => ({
   id: 'e',
@@ -27,6 +28,7 @@ describe('ExportView', () => {
         segments={[]}
         expected={{}}
         accountExpected={noAccounts}
+        onRestore={vi.fn()}
       />,
     );
     expect(
@@ -45,11 +47,75 @@ describe('ExportView', () => {
         segments={[]}
         expected={{}}
         accountExpected={noAccounts}
+        onRestore={vi.fn()}
       />,
     );
     expect(
       screen.getByRole('button', { name: /export & share \.xlsx/i }),
     ).toBeDisabled();
     expect(screen.getByText(/nothing to export yet/i)).toBeInTheDocument();
+  });
+
+  it('parses a chosen backup file and asks for confirmation before restoring', async () => {
+    const onRestore = vi.fn();
+    render(
+      <ExportView
+        expenses={[]}
+        segments={[]}
+        expected={{}}
+        accountExpected={noAccounts}
+        onRestore={onRestore}
+      />,
+    );
+
+    const json = buildBackup([exp()], [], {}, noAccounts);
+    const file = new File([json], 'dts-backup-2026-07-01.json', {
+      type: 'application/json',
+    });
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/1 expense/)).toBeInTheDocument(),
+    );
+    expect(onRestore).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /replace all data/i }));
+    expect(onRestore).toHaveBeenCalledWith({
+      expenses: [exp()],
+      segments: [],
+      dtsExpected: {},
+      dtsAccountExpected: noAccounts,
+    });
+  });
+
+  it('shows an error and does not offer to restore an invalid file', async () => {
+    const onRestore = vi.fn();
+    render(
+      <ExportView
+        expenses={[]}
+        segments={[]}
+        expected={{}}
+        accountExpected={noAccounts}
+        onRestore={onRestore}
+      />,
+    );
+
+    const file = new File(['not json'], 'bad.json', {
+      type: 'application/json',
+    });
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/not a valid json file/i)).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole('button', { name: /replace all data/i }),
+    ).not.toBeInTheDocument();
   });
 });
