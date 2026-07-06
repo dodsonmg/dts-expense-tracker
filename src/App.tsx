@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTrips } from './useTrips';
 import { useTripData } from './useTripData';
 import { EntryForm } from './components/EntryForm';
 import { ExpenseList } from './components/ExpenseList';
@@ -7,6 +8,8 @@ import { TotalsView } from './components/TotalsView';
 import { ExportView } from './components/ExportView';
 import { UpdateToast } from './components/UpdateToast';
 import { HelpView } from './components/HelpView';
+import { TripSwitcher } from './components/TripSwitcher';
+import { buildBackup, type Backup } from './lib/backup';
 
 const TABS = [
   { id: 'entry', label: 'Entry', icon: '＋' },
@@ -21,18 +24,54 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function App() {
   const [tab, setTab] = useState<TabId>('entry');
-  const trip = useTripData();
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const trips = useTrips();
+  const trip = useTripData(trips.activeTripId, trips.reloadEpoch);
+  const ready = trips.loaded && trip.loaded;
+  const activeTrip = trips.trips.find((t) => t.id === trips.activeTripId);
+
+  // A restore reloads the active trip's data, which briefly unmounts
+  // ExportView while it loads — so the confirmation lives here instead,
+  // where it survives that remount.
+  async function handleRestore(backup: Backup) {
+    await trips.restoreFromBackup(backup);
+    setRestoreMessage('Backup restored.');
+  }
 
   return (
     <div className="app">
       <header className="app__header">
         <h1>DTS Expense Tracker</h1>
+        {trips.loaded && (
+          <TripSwitcher
+            trips={trips.trips}
+            activeTripId={trips.activeTripId}
+            onSelect={trips.selectTrip}
+            onCreate={trips.createTrip}
+            onRename={trips.renameTrip}
+            onDelete={trips.deleteTrip}
+          />
+        )}
       </header>
 
       <UpdateToast />
 
+      {restoreMessage && (
+        <div className="update-toast">
+          <span>{restoreMessage}</span>
+          <button
+            type="button"
+            className="update-toast__dismiss"
+            aria-label="Dismiss"
+            onClick={() => setRestoreMessage(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <main className="app__main">
-        {!trip.loaded ? (
+        {!ready ? (
           <p className="muted">Loading…</p>
         ) : tab === 'entry' ? (
           <EntryForm onAdd={trip.addExpense} onDone={() => setTab('list')} />
@@ -60,11 +99,13 @@ export default function App() {
           />
         ) : tab === 'export' ? (
           <ExportView
+            tripName={activeTrip?.name ?? ''}
             expenses={trip.expenses}
             segments={trip.segments}
             expected={trip.dtsExpected}
             accountExpected={trip.dtsAccountExpected}
-            onRestore={trip.restoreAll}
+            onDownloadBackup={async () => buildBackup(await trips.loadAllTripsData())}
+            onRestore={handleRestore}
           />
         ) : (
           <HelpView />

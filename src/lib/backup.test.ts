@@ -5,7 +5,7 @@ import {
   buildBackup,
   parseBackup,
 } from './backup';
-import type { Expense, MieSegment } from '../types';
+import type { Expense, MieSegment, TripBackup } from '../types';
 
 const exp = (over: Partial<Expense> = {}): Expense => ({
   id: 'e',
@@ -31,21 +31,25 @@ const seg = (over: Partial<MieSegment> = {}): MieSegment => ({
   ...over,
 });
 
-describe('buildBackup / parseBackup', () => {
-  it('round-trips expenses, segments, and DTS totals losslessly', () => {
-    const expenses = [exp()];
-    const segments = [seg()];
-    const dtsExpected = { LODGING: 16 };
-    const dtsAccountExpected = { gtcc: 16, personal: null };
+const tripBackup = (over: Partial<TripBackup> = {}): TripBackup => ({
+  id: 't1',
+  name: 'London Aug 2026',
+  createdAt: '2026-08-01T00:00:00.000Z',
+  expenses: [exp()],
+  segments: [seg()],
+  dtsExpected: { LODGING: 16 },
+  dtsAccountExpected: { gtcc: 16, personal: null },
+  ...over,
+});
 
-    const json = buildBackup(expenses, segments, dtsExpected, dtsAccountExpected);
+describe('buildBackup / parseBackup (v2, multi-trip)', () => {
+  it('round-trips multiple trips losslessly', () => {
+    const trips = [tripBackup(), tripBackup({ id: 't2', name: 'Ramstein Sep 2026', expenses: [] })];
+    const json = buildBackup(trips);
     const parsed = parseBackup(json);
 
-    expect(parsed.expenses).toEqual(expenses);
-    expect(parsed.segments).toEqual(segments);
-    expect(parsed.dtsExpected).toEqual(dtsExpected);
-    expect(parsed.dtsAccountExpected).toEqual(dtsAccountExpected);
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
+    expect(parsed.trips).toEqual(trips);
     expect(parsed.exportedAt).not.toBe('');
   });
 
@@ -64,8 +68,53 @@ describe('buildBackup / parseBackup', () => {
     );
   });
 
-  it('rejects expenses that are missing required fields', () => {
+  it('rejects a trip missing required expense fields', () => {
     const bad = JSON.stringify({
+      version: 2,
+      exportedAt: '',
+      trips: [
+        {
+          id: 't1',
+          name: 'Trip',
+          createdAt: '2026-01-01',
+          expenses: [{ id: 'e' }],
+          segments: [],
+          dtsExpected: {},
+          dtsAccountExpected: { gtcc: null, personal: null },
+        },
+      ],
+    });
+    expect(() => parseBackup(bad)).toThrow(BackupParseError);
+  });
+
+  it('rejects a backup from a newer app version', () => {
+    const future = JSON.stringify({ version: 999, exportedAt: '', trips: [] });
+    expect(() => parseBackup(future)).toThrow(BackupParseError);
+  });
+
+  it('migrates a v1 (flat, single-trip) backup into one synthetic trip', () => {
+    const v1 = JSON.stringify({
+      version: 1,
+      exportedAt: '2026-07-01T00:00:00.000Z',
+      expenses: [exp()],
+      segments: [seg()],
+      dtsExpected: { LODGING: 16 },
+      dtsAccountExpected: { gtcc: 16, personal: null },
+    });
+
+    const parsed = parseBackup(v1);
+
+    expect(parsed.version).toBe(2);
+    expect(parsed.trips).toHaveLength(1);
+    expect(parsed.trips[0].name).toBe('Restored trip');
+    expect(parsed.trips[0].expenses).toEqual([exp()]);
+    expect(parsed.trips[0].segments).toEqual([seg()]);
+    expect(parsed.trips[0].dtsExpected).toEqual({ LODGING: 16 });
+    expect(parsed.trips[0].dtsAccountExpected).toEqual({ gtcc: 16, personal: null });
+  });
+
+  it('rejects a v1 backup that is missing required fields', () => {
+    const badV1 = JSON.stringify({
       version: 1,
       exportedAt: '',
       expenses: [{ id: 'e' }],
@@ -73,18 +122,6 @@ describe('buildBackup / parseBackup', () => {
       dtsExpected: {},
       dtsAccountExpected: { gtcc: null, personal: null },
     });
-    expect(() => parseBackup(bad)).toThrow(BackupParseError);
-  });
-
-  it('rejects a backup from a newer app version', () => {
-    const future = JSON.stringify({
-      version: 999,
-      exportedAt: '',
-      expenses: [],
-      segments: [],
-      dtsExpected: {},
-      dtsAccountExpected: { gtcc: null, personal: null },
-    });
-    expect(() => parseBackup(future)).toThrow(BackupParseError);
+    expect(() => parseBackup(badV1)).toThrow(BackupParseError);
   });
 });

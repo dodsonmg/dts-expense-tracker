@@ -48,6 +48,23 @@ export type Account = 'gtcc' | 'personal';
 // Reimbursement totals DTS shows per account (USD).
 export type DtsAccountExpected = Record<Account, number | null>;
 
+// One trip's identity. Its data (expenses/segments/DTS totals) lives under
+// trip-scoped keys in db.ts, not on this record.
+export interface Trip {
+  id: string;
+  name: string;
+  createdAt: string; // ISO timestamp
+}
+
+// A trip's identity plus its full data — the unit both whole-device backup
+// (lib/backup.ts) and bulk restore (db.ts) operate on.
+export interface TripBackup extends Trip {
+  expenses: Expense[];
+  segments: MieSegment[];
+  dtsExpected: DtsExpected;
+  dtsAccountExpected: DtsAccountExpected;
+}
+
 // A single location segment of the M&IE per-diem calculation. USD only.
 export interface MieSegment {
   id: string;

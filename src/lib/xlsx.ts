@@ -6,12 +6,13 @@ import type {
 } from '../types';
 import { buildReport, type ReportCategoryRow, type ReportAccountRow } from './report';
 import type { MatchStatus, Reconcile } from './reconcile';
+import { slugify } from './format';
 
 export const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-export function xlsxFilename(now = new Date()): string {
-  return `dts-expenses-${now.toISOString().slice(0, 10)}.xlsx`;
+export function xlsxFilename(tripName: string, now = new Date()): string {
+  return `dts-expenses-${slugify(tripName)}-${now.toISOString().slice(0, 10)}.xlsx`;
 }
 
 const MONEY_FMT = '#,##0.00';

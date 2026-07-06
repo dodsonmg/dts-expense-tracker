@@ -100,11 +100,28 @@ capture as above; it's JSON, readable directly) and `getByRole('button', {
 name: 'Restore from backup…' })`, which just clicks a hidden `input[type=file]`
 — set the file directly rather than clicking the button:
 `page.locator('input[type="file"]').setInputFiles(path)`. That shows a
-confirmation card (`text=/This will replace/`) with counts; only
+confirmation card (`text=/This will replace every trip on this device/`)
+summarizing every trip in the backup (name + expense count each); only
 `getByRole('button', { name: 'Replace all data' })` actually calls
 `onRestore`, `getByRole('button', { name: 'Cancel' })` discards it. An invalid
 file shows an inline error (e.g. `text=/Not a valid JSON file/`) and never
-renders the confirmation card.
+renders the confirmation card. The backup covers **every trip on the
+device**, not just the active one — restoring replaces the whole trip list.
+
+## Trip switcher
+
+Header control, next to the `<h1>`: `getByRole('button', { name: /^Trip:/ })`
+opens an inline panel (a `.card`, not a portal/modal) listing every trip.
+Within it: `getByRole('button', { name: '<trip name>' })` selects that trip
+and closes the panel; each row also has `getByRole('button', { name: 'Rename'
+})` (swaps to a text input + `Save`/`Cancel`) and `getByRole('button', { name:
+'Delete' })` (shows a nested confirm card, `text=/can't be undone/`, before
+actually calling delete) — `Delete` is `disabled` when only one trip exists.
+`getByRole('button', { name: '＋ New trip' })` reveals a text input +
+`Create`. A fresh `localStorage.clear()` + reload (this skill's standard
+bootstrap) still yields exactly one auto-created default trip (e.g. "Trip
+1"), so existing single-trip verification flows don't need to change their
+assumptions about initial state.
 
 ## PWA update/offline-ready toast
 

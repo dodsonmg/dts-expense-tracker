@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type {
   Account,
   Category,
@@ -17,59 +17,71 @@ import {
   saveExpenses,
   saveSegments,
 } from './db';
+import { newId } from './lib/id';
 
-const newId = (): string =>
-  globalThis.crypto?.randomUUID?.() ??
-  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-// Loads the trip from IndexedDB once, keeps it in React state, and persists any
-// change back. Persistence is skipped until the initial load completes so we
-// never overwrite stored data with the empty initial state.
-export function useTripData() {
+// Loads one trip's data from IndexedDB, keeps it in React state, and persists
+// any change back. Persistence is skipped until the initial load completes so
+// we never overwrite stored data with the empty initial state.
+//
+// Re-loads whenever `tripId` changes (switching trips) or `reloadEpoch`
+// changes (a whole-device backup restore — the active trip id may not change,
+// so a bump forces a re-fetch from storage).
+export function useTripData(tripId: string, reloadEpoch = 0) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [segments, setSegments] = useState<MieSegment[]>([]);
   const [dtsExpected, setDtsExpectedState] = useState<DtsExpected>({});
   const [dtsAccountExpected, setDtsAccountExpectedState] =
     useState<DtsAccountExpected>({ gtcc: null, personal: null });
-  const [loaded, setLoaded] = useState(false);
-  const ready = useRef(false);
+  // Which (tripId, reloadEpoch) pair the state above currently holds data
+  // for, or null before the first load resolves. `ready` is derived by
+  // comparing it against the current inputs — the instant tripId/reloadEpoch
+  // changes, `loadedFor` still names the *previous* trip (nothing has updated
+  // it yet), so `ready` is already false in that very render, before the
+  // per-field save effects (also keyed on `tripId`) run in the same commit.
+  // That's what stops a trip switch from saving the outgoing trip's
+  // still-resident state under the new trip's key during the async load gap.
+  const [loadedFor, setLoadedFor] = useState<{
+    tripId: string;
+    epoch: number;
+  } | null>(null);
+  const ready = loadedFor?.tripId === tripId && loadedFor.epoch === reloadEpoch;
 
   useEffect(() => {
+    if (!tripId) return;
     let alive = true;
     void Promise.all([
-      loadExpenses(),
-      loadSegments(),
-      loadDtsExpected(),
-      loadDtsAccountExpected(),
+      loadExpenses(tripId),
+      loadSegments(tripId),
+      loadDtsExpected(tripId),
+      loadDtsAccountExpected(tripId),
     ]).then(([e, s, d, a]) => {
       if (!alive) return;
       setExpenses(e);
       setSegments(s);
       setDtsExpectedState(d);
       setDtsAccountExpectedState(a);
-      ready.current = true;
-      setLoaded(true);
+      setLoadedFor({ tripId, epoch: reloadEpoch });
     });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [tripId, reloadEpoch]);
 
   useEffect(() => {
-    if (ready.current) void saveExpenses(expenses);
-  }, [expenses]);
+    if (ready) void saveExpenses(tripId, expenses);
+  }, [ready, tripId, expenses]);
 
   useEffect(() => {
-    if (ready.current) void saveSegments(segments);
-  }, [segments]);
+    if (ready) void saveSegments(tripId, segments);
+  }, [ready, tripId, segments]);
 
   useEffect(() => {
-    if (ready.current) void saveDtsExpected(dtsExpected);
-  }, [dtsExpected]);
+    if (ready) void saveDtsExpected(tripId, dtsExpected);
+  }, [ready, tripId, dtsExpected]);
 
   useEffect(() => {
-    if (ready.current) void saveDtsAccountExpected(dtsAccountExpected);
-  }, [dtsAccountExpected]);
+    if (ready) void saveDtsAccountExpected(tripId, dtsAccountExpected);
+  }, [ready, tripId, dtsAccountExpected]);
 
   const addExpense = useCallback((data: Omit<Expense, 'id'>) => {
     setExpenses((prev) => [{ ...data, id: newId() }, ...prev]);
@@ -118,25 +130,8 @@ export function useTripData() {
     [],
   );
 
-  // Replaces the entire trip with a restored backup (issue #7) — not a merge.
-  // Each setter's own effect persists it to IndexedDB, same as any other change.
-  const restoreAll = useCallback(
-    (data: {
-      expenses: Expense[];
-      segments: MieSegment[];
-      dtsExpected: DtsExpected;
-      dtsAccountExpected: DtsAccountExpected;
-    }) => {
-      setExpenses(data.expenses);
-      setSegments(data.segments);
-      setDtsExpectedState(data.dtsExpected);
-      setDtsAccountExpectedState(data.dtsAccountExpected);
-    },
-    [],
-  );
-
   return {
-    loaded,
+    loaded: ready,
     expenses,
     segments,
     dtsExpected,
@@ -149,7 +144,6 @@ export function useTripData() {
     deleteSegment,
     setDtsExpected,
     setDtsAccountExpected,
-    restoreAll,
   };
 }
 
