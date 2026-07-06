@@ -26,4 +26,9 @@ describe('HelpView', () => {
     const items = document.querySelectorAll('details summary');
     expect(items[0].textContent).toBe('What’s the expected workflow?');
   });
+
+  it('explains multiple trips', () => {
+    render(<HelpView />);
+    expect(screen.getByText('How do multiple trips work?')).toBeInTheDocument();
+  });
 });

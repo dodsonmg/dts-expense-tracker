@@ -8,7 +8,11 @@
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'What’s the expected workflow?',
-    a: 'Capture expenses as they happen on the Entry tab — plus M&IE per-diem and MILEAGE legs on their own tabs. As charges land in DTS, check them off on the List tab. At the end of the trip, read DTS’s own totals and type them into the Totals tab to reconcile. Then export the formatted spreadsheet to bring to the office.',
+    a: 'Start (or switch to) a trip using the switcher in the header. Capture expenses as they happen on the Entry tab — plus M&IE per-diem and MILEAGE legs on their own tabs. As charges land in DTS, check them off on the List tab. At the end of the trip, read DTS’s own totals and type them into the Totals tab to reconcile. Then export the formatted spreadsheet to bring to the office.',
+  },
+  {
+    q: 'How do multiple trips work?',
+    a: 'Tap the trip name in the header to switch trips, rename one, or start a new one — each trip keeps its own expenses, M&IE segments, and DTS totals completely separate. There’s always at least one trip; deleting the last one isn’t allowed. Export and the per-trip filename always reflect whichever trip is active. A whole-device backup covers every trip at once, restoring replaces all of them together.',
   },
   {
     q: 'Why aren’t GBP and USD ever added together?',

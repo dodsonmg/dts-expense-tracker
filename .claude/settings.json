@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "grep -q 'gh pr create' && printf '{\"systemMessage\":\"Docs check: confirm SPEC.md, README.md, CLAUDE.md, and .claude/skills/verifier-gui/SKILL.md (if UI selectors/labels changed) reflect this change before merging.\",\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"Docs check: before this PR is merged, confirm SPEC.md, README.md and CLAUDE.md reflect the change, and update .claude/skills/verifier-gui/SKILL.md if this PR touched UI selectors, labels, or aria-labels the skill references; update any that drifted and push (the PR auto-updates).\"}}' || true"
+            "command": "grep -q 'gh pr create' && printf '{\"systemMessage\":\"Docs check: confirm SPEC.md, README.md, CLAUDE.md, HelpView.tsx FAQ (if domain invariants changed), and .claude/skills/verifier-gui/SKILL.md (if UI selectors/labels changed) reflect this change before merging.\",\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"Docs check: before this PR is merged, confirm SPEC.md, README.md and CLAUDE.md reflect the change; keep src/components/HelpView.tsx FAQ in sync with CLAUDE.md Domain invariants section if this PR changed it; and update .claude/skills/verifier-gui/SKILL.md if this PR touched UI selectors, labels, or aria-labels the skill references; update any that drifted and push (the PR auto-updates).\"}}' || true"
           }
         ]
       }
