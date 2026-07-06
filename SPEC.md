@@ -164,7 +164,14 @@ Two tables, GBP and USD kept separate throughout:
    'autoUpdate'` was previously silent — a tab already open had no way to know
    an update had shipped), and a Help tab (install steps + FAQ covering the
    domain concepts above). iOS meta tags and the manifest were already solid.
-10. Backup/restore all data as a file.
+10. ~~Backup/restore all data as a file.~~ **Done** — a single JSON file
+    (all expenses, M&IE segments, DTS totals) via `lib/backup.ts`, surfaced on
+    the Export tab. Restore is **replace-only**, not merge: there's no
+    multi-trip yet (item 8, still open) and the DTS-expected fields are
+    per-category/account singletons with no sensible merge rule, so restore
+    means "make this device match the backup," same as restoring a phone.
+    Requires an explicit confirmation step (summary of what will be replaced)
+    before committing.
 11. ~~Optional MILEAGE calculator (miles × rate).~~ **Done** — see § MILEAGE.
     MILEAGE stayed itemized (not M&IE-style) so each leg is still individually
     comparable against DTS; the calculator is an input convenience only.

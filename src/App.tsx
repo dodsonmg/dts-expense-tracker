@@ -64,6 +64,7 @@ export default function App() {
             segments={trip.segments}
             expected={trip.dtsExpected}
             accountExpected={trip.dtsAccountExpected}
+            onRestore={trip.restoreAll}
           />
         ) : (
           <HelpView />
