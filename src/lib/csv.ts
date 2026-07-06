@@ -6,6 +6,7 @@ import type {
 } from '../types';
 import { buildReport } from './report';
 import type { MatchStatus } from './reconcile';
+import { slugify } from './format';
 
 // Hand-rolled CSV (no dependency, per SPEC.md). Excel/Sheets-safe escaping.
 function cell(value: string | number | null): string {
@@ -151,6 +152,6 @@ export function buildCsv(
   return lines.join('\r\n');
 }
 
-export function csvFilename(now = new Date()): string {
-  return `dts-expenses-${now.toISOString().slice(0, 10)}.csv`;
+export function csvFilename(tripName: string, now = new Date()): string {
+  return `dts-expenses-${slugify(tripName)}-${now.toISOString().slice(0, 10)}.csv`;
 }

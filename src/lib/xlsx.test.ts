@@ -44,9 +44,9 @@ function findRow(
 
 describe('buildXlsx', () => {
   it('has the expected filename', () => {
-    expect(xlsxFilename(new Date('2026-07-04T12:00:00Z'))).toBe(
-      'dts-expenses-2026-07-04.xlsx',
-    );
+    expect(
+      xlsxFilename('London Aug 2026', new Date('2026-07-04T12:00:00Z')),
+    ).toBe('dts-expenses-london-aug-2026-2026-07-04.xlsx');
   });
 
   it('produces the three sheets with reconciliation tables and raw rows', async () => {

@@ -158,20 +158,33 @@ Two tables, GBP and USD kept separate throughout:
    at the top; the CSV export also carries the DTS comparison columns.
 
 **Phase 3 — multi-trip + robustness**
-8. Multiple trips; per-trip export.
+8. ~~Multiple trips; per-trip export.~~ **Done** — a `Trip` (id/name/createdAt)
+   is a new top-level entity; each trip's expenses/segments/DTS totals live
+   under `trip:<id>:*`-prefixed IndexedDB keys (`db.ts`), loaded by
+   `useTripData(tripId, reloadEpoch)`. `useTrips.ts` owns the trip list and
+   active id, and create/rename/delete; a device always has **at least one
+   trip** (deleting the last one is disallowed) — a fresh install or an
+   upgrading single-trip user both get exactly one auto-created/migrated trip
+   via `db.ts`'s `ensureInitialized`, no naming prompt. The header's
+   `TripSwitcher` is the switch/create/rename/delete UI, reachable from every
+   tab (not a 7th tab). Export (`.xlsx`/CSV) is per-trip by construction —
+   filenames fold in a slugified trip name (`lib/format.ts`'s `slugify`).
+   Whole-device JSON backup (item 10) became multi-trip in the same change.
 9. ~~PWA install/offline polish.~~ **Done** — app icon (hedgehog, replacing the
    placeholder), an update-available/offline-ready toast (`registerType:
    'autoUpdate'` was previously silent — a tab already open had no way to know
    an update had shipped), and a Help tab (install steps + FAQ covering the
    domain concepts above). iOS meta tags and the manifest were already solid.
 10. ~~Backup/restore all data as a file.~~ **Done** — a single JSON file
-    (all expenses, M&IE segments, DTS totals) via `lib/backup.ts`, surfaced on
-    the Export tab. Restore is **replace-only**, not merge: there's no
-    multi-trip yet (item 8, still open) and the DTS-expected fields are
+    covering **every trip on the device** (`Backup.trips: TripBackup[]`,
+    `lib/backup.ts`, `BACKUP_VERSION = 2`), surfaced on the Export tab. An
+    older v1 (single flat trip, pre-multi-trip) backup is migrated on restore
+    into one synthetic trip named "Restored trip." Restore is
+    **replace-only**, not merge: the DTS-expected fields are
     per-category/account singletons with no sensible merge rule, so restore
     means "make this device match the backup," same as restoring a phone.
-    Requires an explicit confirmation step (summary of what will be replaced)
-    before committing.
+    Requires an explicit confirmation step (summary of every trip being
+    replaced) before committing.
 11. ~~Optional MILEAGE calculator (miles × rate).~~ **Done** — see § MILEAGE.
     MILEAGE stayed itemized (not M&IE-style) so each leg is still individually
     comparable against DTS; the calculator is an input convenience only.

@@ -20,3 +20,16 @@ export function today(): string {
   const off = d.getTimezoneOffset();
   return new Date(d.getTime() - off * 60_000).toISOString().slice(0, 10);
 }
+
+// Turns a free-text trip name into a safe filename fragment, e.g.
+// "London Aug 2026" -> "london-aug-2026". Falls back to "trip" for
+// empty/all-punctuation/non-Latin input rather than producing an empty
+// segment.
+export function slugify(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'trip';
+}

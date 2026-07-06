@@ -33,10 +33,14 @@ product spec.
   top and raw rows behind, plus a plain **CSV** (`usd_incomplete` column).
   Shared via the iOS share sheet (Mail) or downloaded; both usable as
   standalone spreadsheets.
-- **Backup/restore** — a single JSON file with everything on the device
+- **Multi-trip** — create/rename/delete trips from the header's trip switcher;
+  each trip's expenses/M&IE segments/DTS totals are stored separately, and
+  export is always scoped to whichever trip is active. A device always has
+  at least one trip.
+- **Backup/restore** — a single JSON file with every trip on the device
   (expenses, M&IE segments, DTS totals), for moving to a new phone. Restoring
-  **replaces** the device's data; a confirmation step shows what will be
-  replaced before it happens.
+  **replaces** every trip on the device; a confirmation step shows what will
+  be replaced before it happens.
 - **Installable & offline** — "Add to Home Screen"; works with no signal after
   first load. A dismissible toast surfaces when an update is ready to reload,
   or when the app is confirmed ready to work offline.
@@ -86,20 +90,22 @@ mode). Data persists across reloads via IndexedDB.
 ```
 src/
   types.ts          Domain model + fixed category set; isUsdPending / isEntered
-  db.ts             IndexedDB load/save (localForage)
-  useTripData.ts    The one stateful hook (loads once, mirrors to IndexedDB)
+  db.ts             IndexedDB load/save (localForage), per-trip prefixed keys
+  useTrips.ts       Trip list + active trip id; create/rename/delete/select
+  useTripData.ts    One trip's data (keyed by tripId, reloads on trip switch)
   lib/              Pure logic, no React — unit-tested
+    id.ts           Shared id generator (useTrips / useTripData)
     mie.ts          M&IE per-diem math
     mileage.ts      MILEAGE calculator (miles × rate)
     totals.ts       By-category / by-account totals (GBP & USD separate)
     reconcile.ts    App-vs-DTS comparison (USD, cent tolerance)
     report.ts       Shared export model consumed by both exporters
-    csv.ts          CSV export
+    csv.ts          CSV export (per-trip filename)
     xlsx.ts         Formatted .xlsx export (ExcelJS, dynamically imported)
-    backup.ts       Whole-state JSON backup/restore (build/parse + validate)
-    format.ts       Currency + date helpers
+    backup.ts       Whole-device JSON backup/restore (all trips; v1→v2 migration)
+    format.ts       Currency + date helpers; slugify (export filenames)
   components/       One file per screen (Entry, List, M&IE, Totals, Export,
-                    Help) + UpdateToast (update/offline-ready banner)
+                    Help) + TripSwitcher (header) + UpdateToast (banner)
   App.tsx           Tab shell
 scripts/gen-icons.mjs  Rasterizes the hedgehog SVG to every icon size
                        (Playwright/headless Chromium)
@@ -141,9 +147,7 @@ The app icon is regenerated with `npm run gen-icons` (needs
 
 ## Roadmap
 
-**Phase 1 (MVP)** and **Phase 2 (reconciliation)** are implemented and deployed.
-Remaining phases in [`SPEC.md`](./SPEC.md):
+**Phase 1 (MVP)**, **Phase 2 (reconciliation)**, and **Phase 3 (multi-trip +
+robustness)** are implemented and deployed. Remaining in [`SPEC.md`](./SPEC.md):
 
-- **Phase 3 — multi-trip + robustness:** multiple trips, backup/restore.
-  (Mileage calculator and PWA/offline polish done.)
 - **Phase 4 — nice-to-haves:** receipt photos, interactive laptop import.

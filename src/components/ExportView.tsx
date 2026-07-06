@@ -1,41 +1,29 @@
 import { useRef, useState } from 'react';
-import type {
-  DtsAccountExpected,
-  DtsExpected,
-  Expense,
-  MieSegment,
-} from '../types';
+import type { DtsAccountExpected, DtsExpected, Expense, MieSegment } from '../types';
 import { buildCsv, csvFilename } from '../lib/csv';
 import { buildXlsx, xlsxFilename, XLSX_MIME } from '../lib/xlsx';
-import {
-  backupFilename,
-  BackupParseError,
-  buildBackup,
-  parseBackup,
-  type Backup,
-} from '../lib/backup';
+import { backupFilename, BackupParseError, parseBackup, type Backup } from '../lib/backup';
 
 interface Props {
+  tripName: string;
   expenses: Expense[];
   segments: MieSegment[];
   expected: DtsExpected;
   accountExpected: DtsAccountExpected;
-  onRestore: (data: {
-    expenses: Expense[];
-    segments: MieSegment[];
-    dtsExpected: DtsExpected;
-    dtsAccountExpected: DtsAccountExpected;
-  }) => void;
+  onDownloadBackup: () => Promise<string>;
+  onRestore: (backup: Backup) => void | Promise<void>;
 }
 
 // Export to email to self. A formatted .xlsx (reconciliation tables at the top)
 // is primary; a plain CSV is kept as a lightweight fallback. Sharing uses the
 // Web Share API (iOS shows Mail) with a download fallback.
 export function ExportView({
+  tripName,
   expenses,
   segments,
   expected,
   accountExpected,
+  onDownloadBackup,
   onRestore,
 }: Props) {
   const [status, setStatus] = useState<string | null>(null);
@@ -75,12 +63,15 @@ export function ExportView({
 
   async function makeXlsx(): Promise<{ blob: Blob; name: string }> {
     const buf = await buildXlsx(expenses, segments, expected, accountExpected);
-    return { blob: new Blob([buf], { type: XLSX_MIME }), name: xlsxFilename() };
+    return {
+      blob: new Blob([buf], { type: XLSX_MIME }),
+      name: xlsxFilename(tripName),
+    };
   }
 
   function makeCsv(): { blob: Blob; name: string } {
     const csv = buildCsv(expenses, segments, expected, accountExpected);
-    return { blob: new Blob([csv], { type: 'text/csv' }), name: csvFilename() };
+    return { blob: new Blob([csv], { type: 'text/csv' }), name: csvFilename(tripName) };
   }
 
   async function withBusy(fn: () => Promise<void>) {
@@ -95,8 +86,8 @@ export function ExportView({
     }
   }
 
-  function downloadBackupFile() {
-    const json = buildBackup(expenses, segments, expected, accountExpected);
+  async function downloadBackupFile() {
+    const json = await onDownloadBackup();
     downloadBlob(new Blob([json], { type: 'application/json' }), backupFilename());
   }
 
@@ -115,16 +106,14 @@ export function ExportView({
     }
   }
 
-  function commitRestore() {
+  async function commitRestore() {
     if (!pendingRestore) return;
-    onRestore({
-      expenses: pendingRestore.expenses,
-      segments: pendingRestore.segments,
-      dtsExpected: pendingRestore.dtsExpected,
-      dtsAccountExpected: pendingRestore.dtsAccountExpected,
-    });
+    // Not setStatus('Backup restored.') here — restoring reloads the active
+    // trip's data, which unmounts this view while it's loading, discarding
+    // any local status set right before that. App.tsx owns that
+    // confirmation instead, in a banner that survives the remount.
+    await onRestore(pendingRestore);
     setPendingRestore(null);
-    setStatus('Backup restored.');
   }
 
   function cancelRestore() {
@@ -185,13 +174,13 @@ export function ExportView({
       <div className="card stack">
         <h2>Backup</h2>
         <p className="muted small">
-          A full backup (all expenses, M&amp;IE segments, and DTS totals) as a
-          single JSON file — for moving to a new device, not for the office.
-          Restoring <strong>replaces</strong> everything currently on this
-          device.
+          A full backup of <strong>every trip on this device</strong> (all
+          expenses, M&amp;IE segments, and DTS totals) as a single JSON file —
+          for moving to a new device, not for the office. Restoring{' '}
+          <strong>replaces</strong> every trip currently on this device.
         </p>
 
-        <button type="button" className="btn" onClick={downloadBackupFile}>
+        <button type="button" className="btn" onClick={() => void downloadBackupFile()}>
           Download backup (JSON)
         </button>
 
@@ -218,21 +207,21 @@ export function ExportView({
         {pendingRestore && (
           <div className="card stack">
             <p>
-              This will <strong>replace</strong> everything on this device
-              with the backup: {pendingRestore.expenses.length} expense
-              {pendingRestore.expenses.length === 1 ? '' : 's'},{' '}
-              {pendingRestore.segments.length} M&amp;IE segment
-              {pendingRestore.segments.length === 1 ? '' : 's'}, and DTS
-              totals
+              This will <strong>replace every trip on this device</strong> with
+              the backup: {pendingRestore.trips.length} trip
+              {pendingRestore.trips.length === 1 ? '' : 's'} —{' '}
+              {pendingRestore.trips
+                .map((t) => `"${t.name}" (${t.expenses.length} expenses)`)
+                .join(', ')}
               {pendingRestore.exportedAt
-                ? ` (backed up ${new Date(pendingRestore.exportedAt).toLocaleString()})`
+                ? ` — backed up ${new Date(pendingRestore.exportedAt).toLocaleString()}`
                 : ''}
               .
             </p>
             <button
               type="button"
               className="btn btn--danger"
-              onClick={commitRestore}
+              onClick={() => void commitRestore()}
             >
               Replace all data
             </button>

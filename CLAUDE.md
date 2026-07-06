@@ -29,14 +29,28 @@ npm test           # vitest run
 ## Architecture
 
 - `src/types.ts` — domain types + the fixed `CATEGORIES` list/order, plus
-  `isUsdPending`. Single source of truth for the data model.
-- `src/db.ts` — IndexedDB load/save for expenses, M&IE segments, and DTS-expected
-  totals.
-- `src/useTripData.ts` — the one stateful hook: loads once, mirrors state to
-  IndexedDB, exposes add/update/delete for expenses and segments plus
-  `setDtsExpected`. `App` owns it and passes slices down; components are
-  otherwise presentational.
+  `isUsdPending`. Also `Trip` (id/name/createdAt) and `TripBackup` (a `Trip`
+  plus its full data — the unit whole-device backup and bulk restore operate
+  on). Single source of truth for the data model.
+- `src/db.ts` — IndexedDB load/save, one localforage instance. Per-trip data
+  (expenses/segments/DTS totals) lives under `trip:<id>:<field>`-prefixed
+  keys, not one instance per trip (no registry to enumerate those). Also owns
+  the `trips` list + `activeTripId` keys and `ensureInitialized()` — an
+  idempotent migration that runs once: if no trip list exists yet, it wraps
+  whatever the pre-multi-trip flat keys contain (empty for a fresh install,
+  real data for an upgrading user) into one synthetic trip. Those legacy flat
+  keys are never deleted (cheap safety net) and never read again afterward.
+- `src/useTrips.ts` — owns the trip list, active trip id, and
+  create/rename/delete/select. A device always has ≥1 trip — `deleteTrip` is
+  a no-op if it's the last one. `restoreFromBackup` writes every trip's data
+  from a whole-device backup and bumps `reloadEpoch` (see below).
+- `src/useTripData.ts` — one trip's data: `useTripData(tripId, reloadEpoch)`.
+  Reloads when `tripId` changes (switching trips) or `reloadEpoch` changes (a
+  restore preserves trip ids, so `activeTripId` may not change — the epoch
+  forces a re-fetch anyway). `App` composes both hooks and passes slices
+  down; components are otherwise presentational.
 - `src/lib/` — pure functions, no React:
+  - `id.ts` — shared `newId()` (used by both trip hooks).
   - `mie.ts` — M&IE per-diem math.
   - `mileage.ts` — MILEAGE calculator: `mileageAmountUsd` (miles * rate,
     rounded to cents) and `describeMileage` (display string, unrounded to 3dp
@@ -48,12 +62,15 @@ npm test           # vitest run
   - `csv.ts` — CSV export document.
   - `xlsx.ts` — formatted `.xlsx` (ExcelJS, dynamically imported to stay out of
     the main bundle).
-  - `backup.ts` — whole-state JSON backup/restore: `buildBackup` (all
-    expenses/segments/DTS totals + a `version` field), `parseBackup`
-    (structural validation, throws `BackupParseError` with a user-presentable
-    message on anything malformed). Distinct from `csv.ts`/`xlsx.ts`, which are
-    lossy office-facing views — this round-trips everything `db.ts` persists.
-  - `format.ts` — currency + date helpers.
+  - `backup.ts` — whole-**device** JSON backup/restore (`BACKUP_VERSION = 2`):
+    `buildBackup(trips: TripBackup[])`, `parseBackup` (structural validation,
+    throws `BackupParseError` with a user-presentable message on anything
+    malformed; migrates an older v1 single-flat-trip backup into one
+    synthetic trip named "Restored trip"). Distinct from `csv.ts`/`xlsx.ts`,
+    which are lossy per-trip office-facing views — this round-trips every
+    trip's data.
+  - `format.ts` — currency + date helpers, plus `slugify` (trip name → safe
+    filename fragment, used by `csv.ts`/`xlsx.ts`'s filename generators).
   - `pwaRegister.ts` — re-exports `useRegisterSW` from
     `virtual:pwa-register/react`. Exists purely so tests can `vi.mock` a real
     file path; the virtual specifier itself can't be resolved under
@@ -61,8 +78,10 @@ npm test           # vitest run
     fails at Vite's import-analysis step before `vi.mock` ever applies.
 - `src/components/` — one file per screen: `EntryForm`, `ExpenseList`,
   `MieView`, `TotalsView`, `ExportView`, `HelpView` (static FAQ content, no
-  props — the one screen that isn't fed by `useTripData()`). `App.tsx` is the
-  tab shell; it also mounts `UpdateToast` (see below).
+  props — the one screen that isn't fed by `useTripData()`), plus
+  `TripSwitcher` (mounted in the header, not a tab — reachable from every
+  screen). `App.tsx` is the tab shell; it also mounts `UpdateToast` (see
+  below).
 
 ## Domain invariants — get these wrong and the tool is misleading
 
@@ -113,14 +132,20 @@ npm test           # vitest run
    only. GBP is forced null only while the calculator is active (no receipt
    currency concept for a computed mileage allowance); the GTCC/personal
    toggle stays, unlike M&IE.
-10. **Backup restore is replace-only, never a merge.** There's no multi-trip
-    yet, and `DtsExpected`/`DtsAccountExpected` are per-category/account
-    singletons with no sensible merge rule (which number wins?), so restoring
-    a backup always replaces every field `db.ts` persists — same mental model
-    as restoring a phone from a backup. `useTripData.restoreAll` is the only
-    way to bulk-replace state (vs. the one-at-a-time add/update/delete
-    setters); `ExportView` gates it behind a confirmation card showing counts
-    before calling it, since it's otherwise irreversible.
+10. **Backup restore is replace-only, never a merge, and it's whole-device.**
+    `DtsExpected`/`DtsAccountExpected` are per-category/account singletons
+    with no sensible merge rule (which number wins?), so restoring a backup
+    always replaces every trip on the device — same mental model as restoring
+    a phone from a backup. It is not scoped to the active trip: a backup
+    (`lib/backup.ts`'s `Backup.trips`) is every trip's data, and
+    `useTrips.restoreFromBackup` is the only way to bulk-replace the trip
+    list; `ExportView` gates it behind a confirmation card summarizing every
+    trip being replaced before calling it, since it's otherwise irreversible.
+11. **A device always has at least one trip.** `useTrips.deleteTrip` is a
+    no-op if it's the last remaining trip — there's no "no trip" empty state
+    to design for anywhere else in the app. A fresh install or an upgrading
+    single-trip user both get exactly one trip via `db.ts`'s
+    `ensureInitialized`, auto-created/migrated with no naming prompt.
 
 ## Export contract
 
@@ -176,8 +201,8 @@ the same file as a plain icon.
 
 ## Roadmap
 
-MVP (this scaffold) is Phase 1. Phases 2–4 in `SPEC.md`: DTS reconciliation
-(check-off, mismatch flags, `.xlsx` export), multi-trip + backup/restore
-(done — see below) + MILEAGE calculator (done) + PWA install/offline polish
-(done — icon, update toast, Help/FAQ tab), then receipt photos and
-interactive laptop import. Don't pull that work forward without being asked.
+MVP (this scaffold) is Phase 1. Phases 2–3 in `SPEC.md` are done: DTS
+reconciliation (check-off, mismatch flags, `.xlsx` export), multi-trip +
+backup/restore + MILEAGE calculator + PWA install/offline polish (icon,
+update toast, Help/FAQ tab). Phase 4 — receipt photos and interactive laptop
+import — is not started. Don't pull that work forward without being asked.

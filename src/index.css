@@ -46,6 +46,9 @@ body {
   position: sticky;
   top: 0;
   z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .app__header h1 {
@@ -53,6 +56,41 @@ body {
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* ---- Trip switcher ---- */
+.trip-switch__toggle {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trip-switch__panel {
+  margin-top: 0.4rem;
+}
+.trip-switch__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.trip-switch__name {
+  flex: 1;
+  text-align: left;
+}
+.trip-switch__name--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* ---- PWA update/offline-ready banner ---- */

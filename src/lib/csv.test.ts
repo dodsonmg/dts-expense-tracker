@@ -181,9 +181,15 @@ describe('buildCsv — DTS comparison columns', () => {
 });
 
 describe('csvFilename', () => {
-  it('is dated YYYY-MM-DD', () => {
-    expect(csvFilename(new Date('2026-07-04T12:00:00Z'))).toBe(
-      'dts-expenses-2026-07-04.csv',
+  it('is dated YYYY-MM-DD and includes the trip name slug', () => {
+    expect(
+      csvFilename('London Aug 2026', new Date('2026-07-04T12:00:00Z')),
+    ).toBe('dts-expenses-london-aug-2026-2026-07-04.csv');
+  });
+
+  it('falls back to "trip" for an empty trip name', () => {
+    expect(csvFilename('', new Date('2026-07-04T12:00:00Z'))).toBe(
+      'dts-expenses-trip-2026-07-04.csv',
     );
   });
 });
