@@ -11,10 +11,11 @@ const FAQS: { q: string; a: string | string[] }[] = [
     a: [
       'Start (or switch to) a trip using the switcher in the header.',
       'Capture expenses as they happen on Entry, including MILEAGE — it’s an itemized expense like any other, just defaulting to a miles × rate calculator instead of a typed amount.',
+      'For UK trips: record the GBP amount from the receipt right away, then backfill the USD amount on List once the charge actually lands on the card.',
       'Log M&IE per-diem segments on their own tab.',
       'As charges land on your card / in DTS, check expenses off on List.',
       'At the end of the trip, read DTS’s own totals and enter them on Totals to reconcile.',
-      'Export the formatted spreadsheet to bring to the office.',
+      'Or, skip the in-app reconciliation and export the formatted spreadsheet straight away — it carries the same DTS comparison, for reconciling at the office instead.',
     ],
   },
   {
