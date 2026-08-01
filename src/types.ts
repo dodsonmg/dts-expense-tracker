@@ -5,6 +5,7 @@ export const CATEGORIES = [
   'LODGING',
   'M&IE',
   'MILEAGE',
+  'RENTAL CAR',
   'TRANSPORT',
   'OTHER',
 ] as const;

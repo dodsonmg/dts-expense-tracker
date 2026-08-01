@@ -46,8 +46,9 @@ columns/blocks that are never summed together.
 3. LODGING
 4. M&IE
 5. MILEAGE
-6. TRANSPORT
-7. OTHER
+6. RENTAL CAR
+7. TRANSPORT
+8. OTHER
 
 ## Data model
 
