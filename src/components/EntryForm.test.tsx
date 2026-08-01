@@ -152,3 +152,20 @@ describe('EntryForm — MILEAGE calculator', () => {
     );
   });
 });
+
+describe('EntryForm — LODGING tax reminder', () => {
+  it('shows the tax-splitting reminder when LODGING is selected (the default)', () => {
+    render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
+
+    expect(screen.getByText(/separate rows/i)).toBeInTheDocument();
+  });
+
+  it('hides the reminder for other categories', async () => {
+    const user = userEvent.setup();
+    render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
+
+    await user.selectOptions(screen.getByLabelText('Category'), 'TRANSPORT');
+
+    expect(screen.queryByText(/separate rows/i)).toBeNull();
+  });
+});
