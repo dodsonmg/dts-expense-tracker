@@ -41,7 +41,7 @@ describe('buildReport', () => {
       [exp({ payment: 'GTCC', amount_usd: 500 })],
       [],
       {},
-      { gtcc: 480, personal: null },
+      { gtcc: 480, personal: null, total: null },
     );
     const g = r.accounts.find((a) => a.account === 'gtcc')!;
     expect(g.label).toBe('GTCC');
@@ -49,6 +49,22 @@ describe('buildReport', () => {
     expect(g.recon.status).toBe('mismatch');
     const p = r.accounts.find((a) => a.account === 'personal')!;
     expect(p.recon.status).toBe('unchecked');
+  });
+
+  it('carries the all-expenses Total, reconciled independently of the split', () => {
+    const r = buildReport(
+      [
+        exp({ payment: 'GTCC', amount_usd: 500 }),
+        exp({ payment: 'personal', amount_usd: 200 }),
+      ],
+      [],
+      {},
+      { gtcc: 500, personal: 200, total: 650 },
+    );
+    expect(r.accountTotal.label).toBe('Total');
+    expect(r.accountTotal.usd).toBe(700);
+    expect(r.accountTotal.recon.status).toBe('mismatch');
+    expect(r.accountTotal.recon.delta).toBe(50); // app 700 - dts 650
   });
 
   it('flags a category/account row as USD-incomplete when it includes a pending expense', () => {

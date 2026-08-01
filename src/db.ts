@@ -64,6 +64,17 @@ function normalizeDtsExpected(stored: Record<string, unknown>): DtsExpected {
   return out;
 }
 
+// Defaults `total` for records stored before that field existed.
+function normalizeDtsAccountExpected(
+  stored: Partial<DtsAccountExpected> | null | undefined,
+): DtsAccountExpected {
+  return {
+    gtcc: stored?.gtcc ?? null,
+    personal: stored?.personal ?? null,
+    total: stored?.total ?? null,
+  };
+}
+
 export async function loadExpenses(tripId: string): Promise<Expense[]> {
   const stored =
     (await store.getItem<Expense[]>(tripKey(tripId, 'expenses'))) ?? [];
@@ -106,11 +117,10 @@ export async function saveDtsExpected(
 export async function loadDtsAccountExpected(
   tripId: string,
 ): Promise<DtsAccountExpected> {
-  return (
-    (await store.getItem<DtsAccountExpected>(
-      tripKey(tripId, 'dtsAccountExpected'),
-    )) ?? { gtcc: null, personal: null }
+  const stored = await store.getItem<Partial<DtsAccountExpected>>(
+    tripKey(tripId, 'dtsAccountExpected'),
   );
+  return normalizeDtsAccountExpected(stored);
 }
 
 export async function saveDtsAccountExpected(
@@ -180,19 +190,19 @@ export async function ensureInitialized(): Promise<{
     createdAt: new Date().toISOString(),
   };
 
-  const [expenses, segments, dtsExpectedRaw, dtsAccountExpected] =
+  const [expenses, segments, dtsExpectedRaw, dtsAccountExpectedRaw] =
     await Promise.all([
       store.getItem<Expense[]>(LEGACY_KEYS.expenses),
       store.getItem<MieSegment[]>(LEGACY_KEYS.segments),
       store.getItem<Record<string, unknown>>(LEGACY_KEYS.dtsExpected),
-      store.getItem<DtsAccountExpected>(LEGACY_KEYS.dtsAccountExpected),
+      store.getItem<Partial<DtsAccountExpected>>(LEGACY_KEYS.dtsAccountExpected),
     ]);
 
   await Promise.all([
     saveExpenses(id, normalizeExpenseRows(expenses ?? [])),
     saveSegments(id, segments ?? []),
     saveDtsExpected(id, normalizeDtsExpected(dtsExpectedRaw ?? {})),
-    saveDtsAccountExpected(id, dtsAccountExpected ?? { gtcc: null, personal: null }),
+    saveDtsAccountExpected(id, normalizeDtsAccountExpected(dtsAccountExpectedRaw)),
     saveTrips([trip]),
     saveActiveTripId(id),
   ]);

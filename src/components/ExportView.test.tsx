@@ -18,7 +18,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   ...over,
 });
 
-const noAccounts = { gtcc: null, personal: null };
+const noAccounts = { gtcc: null, personal: null, total: null };
 
 const tripBackup = (over: Partial<TripBackup> = {}): TripBackup => ({
   id: 't1',

@@ -4,7 +4,12 @@ import type {
   Expense,
   MieSegment,
 } from '../types';
-import { buildReport, type ReportCategoryRow, type ReportAccountRow } from './report';
+import {
+  buildReport,
+  type ReportCategoryRow,
+  type ReportAccountRow,
+  type ReportTotalRow,
+} from './report';
 import type { MatchStatus, Reconcile } from './reconcile';
 import { slugify } from './format';
 
@@ -39,7 +44,7 @@ export async function buildXlsx(
   expenses: Expense[],
   segments: MieSegment[],
   expected: DtsExpected = {},
-  accountExpected: DtsAccountExpected = { gtcc: null, personal: null },
+  accountExpected: DtsAccountExpected = { gtcc: null, personal: null, total: null },
 ): Promise<ArrayBuffer> {
   const { default: ExcelJS } = await import('exceljs');
   const report = buildReport(expenses, segments, expected, accountExpected);
@@ -59,8 +64,8 @@ export async function buildXlsx(
   const addReconTable = (
     heading: string,
     firstCol: string,
-    rows: (ReportCategoryRow | ReportAccountRow)[],
-    labelOf: (r: ReportCategoryRow | ReportAccountRow) => string,
+    rows: (ReportCategoryRow | ReportAccountRow | ReportTotalRow)[],
+    labelOf: (r: ReportCategoryRow | ReportAccountRow | ReportTotalRow) => string,
   ) => {
     rec.addRow([]);
     rec.addRow([heading]).font = { bold: true };
@@ -107,8 +112,8 @@ export async function buildXlsx(
   addReconTable(
     'By account (reimbursement)',
     'Account',
-    report.accounts,
-    (r) => (r as ReportAccountRow).label,
+    [report.accountTotal, ...report.accounts],
+    (r) => (r as ReportAccountRow | ReportTotalRow).label,
   );
 
   // --- Expenses sheet: raw rows ---

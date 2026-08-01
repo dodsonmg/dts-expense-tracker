@@ -46,8 +46,14 @@ export type DtsExpected = Partial<Record<Category, number | null>>;
 // Account buckets used for the split-reimbursement reconciliation.
 export type Account = 'gtcc' | 'personal';
 
-// Reimbursement totals DTS shows per account (USD).
-export type DtsAccountExpected = Record<Account, number | null>;
+// Reimbursement totals DTS shows per account (USD), plus the all-expenses
+// grand total (GTCC + Personal) shown above the split — independent of the
+// split itself, so it isn't keyed by Account.
+export interface DtsAccountExpected {
+  gtcc: number | null;
+  personal: number | null;
+  total: number | null;
+}
 
 // One trip's identity. Its data (expenses/segments/DTS totals) lives under
 // trip-scoped keys in db.ts, not on this record.

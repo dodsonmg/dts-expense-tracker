@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
-  Account,
   Category,
   DtsAccountExpected,
   DtsExpected,
@@ -31,7 +30,7 @@ export function useTripData(tripId: string, reloadEpoch = 0) {
   const [segments, setSegments] = useState<MieSegment[]>([]);
   const [dtsExpected, setDtsExpectedState] = useState<DtsExpected>({});
   const [dtsAccountExpected, setDtsAccountExpectedState] =
-    useState<DtsAccountExpected>({ gtcc: null, personal: null });
+    useState<DtsAccountExpected>({ gtcc: null, personal: null, total: null });
   // Which (tripId, reloadEpoch) pair the state above currently holds data
   // for, or null before the first load resolves. `ready` is derived by
   // comparing it against the current inputs — the instant tripId/reloadEpoch
@@ -122,10 +121,11 @@ export function useTripData(tripId: string, reloadEpoch = 0) {
     [],
   );
 
-  // Set one DTS-expected account reimbursement total (USD). null clears it.
+  // Set one DTS-expected account reimbursement total (USD), or the
+  // all-expenses `total` shown above the split. null clears it.
   const setDtsAccountExpected = useCallback(
-    (account: Account, value: number | null) => {
-      setDtsAccountExpectedState((prev) => ({ ...prev, [account]: value }));
+    (key: keyof DtsAccountExpected, value: number | null) => {
+      setDtsAccountExpectedState((prev) => ({ ...prev, [key]: value }));
     },
     [],
   );

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   reconcileCategories,
   reconcileAccounts,
+  reconcileAccountTotal,
   mismatchCount,
 } from './reconcile';
 import { CATEGORIES, type Category } from '../types';
@@ -84,6 +85,7 @@ describe('reconcileAccounts (USD reimbursement)', () => {
     const rows = reconcileAccounts(accounts(500, 200), {
       gtcc: 500,
       personal: 180,
+      total: null,
     });
     const gtcc = rows.find((r) => r.account === 'gtcc')!.usd;
     const personal = rows.find((r) => r.account === 'personal')!.usd;
@@ -96,8 +98,31 @@ describe('reconcileAccounts (USD reimbursement)', () => {
     const rows = reconcileAccounts(accounts(500, 200), {
       gtcc: null,
       personal: null,
+      total: null,
     });
     expect(rows.every((r) => r.usd.status === 'unchecked')).toBe(true);
+  });
+});
+
+describe('reconcileAccountTotal (USD grand total)', () => {
+  it('reconciles GTCC + Personal independently of the split', () => {
+    const rec = reconcileAccountTotal(accounts(500, 200), {
+      gtcc: null,
+      personal: null,
+      total: 650,
+    });
+    expect(rec.app).toBe(700);
+    expect(rec.status).toBe('mismatch');
+    expect(rec.delta).toBe(50); // app 700 - dts 650
+  });
+
+  it('is unchecked when the total is blank', () => {
+    const rec = reconcileAccountTotal(accounts(500, 200), {
+      gtcc: 500,
+      personal: 200,
+      total: null,
+    });
+    expect(rec.status).toBe('unchecked');
   });
 });
 
@@ -110,6 +135,7 @@ describe('mismatchCount', () => {
     const accts = reconcileAccounts(accounts(500, 200), {
       gtcc: 480,
       personal: 200,
+      total: null,
     });
     expect(mismatchCount(cats)).toBe(1); // LODGING only
     expect(mismatchCount(accts)).toBe(1); // GTCC only

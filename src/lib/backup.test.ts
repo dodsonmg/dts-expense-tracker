@@ -38,7 +38,7 @@ const tripBackup = (over: Partial<TripBackup> = {}): TripBackup => ({
   expenses: [exp()],
   segments: [seg()],
   dtsExpected: { LODGING: 16 },
-  dtsAccountExpected: { gtcc: 16, personal: null },
+  dtsAccountExpected: { gtcc: 16, personal: null, total: null },
   ...over,
 });
 
@@ -110,7 +110,11 @@ describe('buildBackup / parseBackup (v2, multi-trip)', () => {
     expect(parsed.trips[0].expenses).toEqual([exp()]);
     expect(parsed.trips[0].segments).toEqual([seg()]);
     expect(parsed.trips[0].dtsExpected).toEqual({ LODGING: 16 });
-    expect(parsed.trips[0].dtsAccountExpected).toEqual({ gtcc: 16, personal: null });
+    expect(parsed.trips[0].dtsAccountExpected).toEqual({
+      gtcc: 16,
+      personal: null,
+      total: null, // v1 predates this field; defaults to null
+    });
   });
 
   it('rejects a v1 backup that is missing required fields', () => {

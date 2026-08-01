@@ -110,7 +110,9 @@ npm test           # vitest run
    (`db.ts`). Read it via `isEntered` (defensive against `undefined`). Surfaced
    as a per-row toggle, a "not entered only" list filter, and a CSV column.
 8. **DTS reconciliation is USD-only** (DTS reports USD). `DtsExpected` (per
-   category) and `DtsAccountExpected` (GTCC/Personal reimbursement) hold the USD
+   category) and `DtsAccountExpected` (`gtcc`/`personal` reimbursement, plus
+   `total` — the all-expenses grand total shown above the GTCC/Personal split,
+   reconciled independently of it via `reconcileAccountTotal`) hold the USD
    totals the user reads off DTS; null/absent = unchecked. `reconcileCategories`
    and `reconcileAccounts` compare the app's USD totals at cent precision
    (sub-half-cent gap = match/float noise, larger = mismatch). It's input, not
@@ -152,7 +154,9 @@ npm test           # vitest run
 `buildCsv` emits one file: `EXPENSES` rows (with `usd_pending`,
 `entered_in_dts`, and `miles`/`rate` — MILEAGE-only, blank elsewhere —
 columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
-then `TOTALS BY ACCOUNT`. The two totals blocks carry the DTS comparison
+then `TOTALS BY ACCOUNT` (a `Total` row — GTCC + Personal, reconciled
+independently via `reconcileAccountTotal` — first, then `GTCC`/`Personal`).
+The two totals blocks carry the DTS comparison
 (`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) and
 a `usd_incomplete` (`yes`/blank) flag, so the emailed sheet works as the
 office's reconciliation view. Money cells are plain 2-dp numbers (or blank) —

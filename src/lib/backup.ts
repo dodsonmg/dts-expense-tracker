@@ -75,11 +75,18 @@ function validateTripData(
   ) {
     throw new BackupParseError(`${label} is missing DTS account totals.`);
   }
+  // Older backups predate the `total` field — default it rather than
+  // rejecting/losing an otherwise-valid backup.
+  const dtsAccountExpectedRaw = b.dtsAccountExpected as Partial<DtsAccountExpected>;
   return {
     expenses: b.expenses,
     segments: b.segments,
     dtsExpected: b.dtsExpected as DtsExpected,
-    dtsAccountExpected: b.dtsAccountExpected as DtsAccountExpected,
+    dtsAccountExpected: {
+      gtcc: dtsAccountExpectedRaw.gtcc ?? null,
+      personal: dtsAccountExpectedRaw.personal ?? null,
+      total: dtsAccountExpectedRaw.total ?? null,
+    },
   };
 }
 

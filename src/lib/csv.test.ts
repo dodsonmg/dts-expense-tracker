@@ -162,10 +162,29 @@ describe('buildCsv — DTS comparison columns', () => {
       ],
       [],
       {},
-      { gtcc: 480, personal: 200 },
+      { gtcc: 480, personal: 200, total: null },
     );
     expect(line(csv, 'GTCC,')).toBe('GTCC,0.00,500.00,480.00,20.00,MISMATCH,');
     expect(line(csv, 'Personal,')).toBe('Personal,0.00,200.00,200.00,0.00,ok,');
+  });
+
+  it('reconciles the all-expenses Total independently, ahead of GTCC/Personal', () => {
+    const csv = buildCsv(
+      [
+        exp({ category: 'LODGING', payment: 'GTCC', amount_usd: 500 }),
+        exp({ id: 'b', category: 'TRANSPORT', payment: 'personal', amount_usd: 200 }),
+      ],
+      [],
+      {},
+      { gtcc: 500, personal: 200, total: 650 },
+    );
+    expect(line(csv, 'Total,')).toBe('Total,0.00,700.00,650.00,50.00,MISMATCH,');
+    // Total appears before the GTCC/Personal rows in TOTALS BY ACCOUNT.
+    const rows = csv.split('\r\n');
+    const accountHeader = rows.indexOf('TOTALS BY ACCOUNT');
+    expect(rows[accountHeader + 2]).toMatch(/^Total,/);
+    expect(rows[accountHeader + 3]).toMatch(/^GTCC,/);
+    expect(rows[accountHeader + 4]).toMatch(/^Personal,/);
   });
 
   it('flags usd_incomplete on a category/account fed by a USD-pending expense', () => {
@@ -173,10 +192,11 @@ describe('buildCsv — DTS comparison columns', () => {
       [exp({ category: 'LODGING', payment: 'GTCC', amount_gbp: 80, amount_usd: null })],
       [],
       { LODGING: 0 },
-      { gtcc: 0, personal: null },
+      { gtcc: 0, personal: null, total: null },
     );
     expect(line(csv, 'LODGING,')).toBe('LODGING,80.00,0.00,0.00,0.00,ok,yes');
     expect(line(csv, 'GTCC,')).toBe('GTCC,80.00,0.00,0.00,0.00,ok,yes');
+    expect(line(csv, 'Total,')).toBe('Total,80.00,0.00,,,,yes');
   });
 });
 
