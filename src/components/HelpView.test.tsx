@@ -21,10 +21,17 @@ describe('HelpView', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows the workflow overview as the first FAQ item', () => {
+  it('shows the workflow overview as the first FAQ item, rendered as a bulleted list', () => {
     render(<HelpView />);
     const items = document.querySelectorAll('details summary');
     expect(items[0].textContent).toBe('What’s the expected workflow?');
+
+    const firstDetails = items[0].closest('details')!;
+    const listItems = firstDetails.querySelectorAll('ul li');
+    expect(listItems.length).toBeGreaterThan(1);
+    // MILEAGE is itemized on Entry, not a separate tab.
+    expect(firstDetails.textContent).toMatch(/MILEAGE/);
+    expect(firstDetails.textContent).not.toMatch(/MILEAGE tab/i);
   });
 
   it('explains multiple trips', () => {
