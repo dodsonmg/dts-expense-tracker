@@ -71,7 +71,7 @@ export function buildReport(
   expenses: Expense[],
   segments: MieSegment[],
   expected: DtsExpected = {},
-  accountExpected: DtsAccountExpected = { gtcc: null, personal: null },
+  accountExpected: DtsAccountExpected = { gtcc: null, personal: null, total: null },
 ): Report {
   const byCategory = totalsByCategory(expenses, segments);
   const catRecon = new Map(

@@ -162,7 +162,7 @@ describe('buildCsv — DTS comparison columns', () => {
       ],
       [],
       {},
-      { gtcc: 480, personal: 200 },
+      { gtcc: 480, personal: 200, total: null },
     );
     expect(line(csv, 'GTCC,')).toBe('GTCC,0.00,500.00,480.00,20.00,MISMATCH,');
     expect(line(csv, 'Personal,')).toBe('Personal,0.00,200.00,200.00,0.00,ok,');
@@ -173,7 +173,7 @@ describe('buildCsv — DTS comparison columns', () => {
       [exp({ category: 'LODGING', payment: 'GTCC', amount_gbp: 80, amount_usd: null })],
       [],
       { LODGING: 0 },
-      { gtcc: 0, personal: null },
+      { gtcc: 0, personal: null, total: null },
     );
     expect(line(csv, 'LODGING,')).toBe('LODGING,80.00,0.00,0.00,0.00,ok,yes');
     expect(line(csv, 'GTCC,')).toBe('GTCC,80.00,0.00,0.00,0.00,ok,yes');

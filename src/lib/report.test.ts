@@ -41,7 +41,7 @@ describe('buildReport', () => {
       [exp({ payment: 'GTCC', amount_usd: 500 })],
       [],
       {},
-      { gtcc: 480, personal: null },
+      { gtcc: 480, personal: null, total: null },
     );
     const g = r.accounts.find((a) => a.account === 'gtcc')!;
     expect(g.label).toBe('GTCC');

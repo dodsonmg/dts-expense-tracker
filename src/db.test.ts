@@ -69,6 +69,7 @@ describe('ensureInitialized', () => {
     expect(await loadDtsAccountExpected(activeTripId)).toEqual({
       gtcc: 10,
       personal: null,
+      total: null, // legacy record predates this field; defaults to null
     });
   });
 
@@ -109,12 +110,16 @@ describe('per-trip data scoping', () => {
       { id: 's', location: 'X', full_rate: 1, partial_rate: 1, full_days: 1, partial_days: 0 },
     ]);
     await saveDtsExpected('t1', { LODGING: 5 });
-    await saveDtsAccountExpected('t1', { gtcc: 5, personal: null });
+    await saveDtsAccountExpected('t1', { gtcc: 5, personal: null, total: null });
 
     expect(await loadExpenses('t1')).toHaveLength(1);
     expect(await loadSegments('t1')).toHaveLength(1);
     expect(await loadDtsExpected('t1')).toEqual({ LODGING: 5 });
-    expect(await loadDtsAccountExpected('t1')).toEqual({ gtcc: 5, personal: null });
+    expect(await loadDtsAccountExpected('t1')).toEqual({
+      gtcc: 5,
+      personal: null,
+      total: null,
+    });
   });
 
   it('does not leak data between two different trip ids', async () => {
@@ -144,7 +149,7 @@ describe('per-trip data scoping', () => {
         expenses: [exp({ note: 'one' })],
         segments: [],
         dtsExpected: {},
-        dtsAccountExpected: { gtcc: null, personal: null },
+        dtsAccountExpected: { gtcc: null, personal: null, total: null },
       },
       {
         id: 't2',
@@ -153,7 +158,7 @@ describe('per-trip data scoping', () => {
         expenses: [exp({ note: 'two' })],
         segments: [],
         dtsExpected: {},
-        dtsAccountExpected: { gtcc: null, personal: null },
+        dtsAccountExpected: { gtcc: null, personal: null, total: null },
       },
     ];
 

@@ -4,7 +4,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TotalsView } from './TotalsView';
 import type {
-  Account,
   Category,
   DtsAccountExpected,
   DtsExpected,
@@ -38,6 +37,7 @@ function Harness({
   const [accountExpected, setAccountExpected] = useState<DtsAccountExpected>({
     gtcc: null,
     personal: null,
+    total: null,
   });
   return (
     <TotalsView
@@ -46,8 +46,8 @@ function Harness({
       expected={expected}
       accountExpected={accountExpected}
       onSetDts={(c: Category, v) => setExpected((p) => ({ ...p, [c]: v }))}
-      onSetAccountDts={(a: Account, v) =>
-        setAccountExpected((p) => ({ ...p, [a]: v }))
+      onSetAccountDts={(key, v) =>
+        setAccountExpected((p) => ({ ...p, [key]: v }))
       }
     />
   );
@@ -92,6 +92,35 @@ describe('TotalsView — DTS reconciliation', () => {
     expect(screen.getByLabelText('matches DTS')).toBeInTheDocument(); // Personal
   });
 
+  it('reconciles the Total independently of the GTCC/Personal split', async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        expenses={[
+          exp({ category: 'LODGING', payment: 'GTCC', amount_usd: 500 }),
+          exp({ category: 'TRANSPORT', payment: 'personal', amount_usd: 200 }),
+        ]}
+      />,
+    );
+
+    // Total (700) mismatches DTS even though the split below matches exactly.
+    await user.type(
+      screen.getByLabelText('DTS USD total for all expenses'),
+      '650',
+    );
+    await user.type(
+      screen.getByLabelText('DTS USD reimbursement for GTCC'),
+      '500',
+    );
+    await user.type(
+      screen.getByLabelText('DTS USD reimbursement for Personal'),
+      '200',
+    );
+
+    expect(screen.getByText('+$50.00')).toBeInTheDocument(); // Total 700 − 650
+    expect(screen.getAllByLabelText('matches DTS')).toHaveLength(2); // GTCC + Personal
+  });
+
   it('calls the setters with the parsed value', async () => {
     const user = userEvent.setup();
     const onSetDts = vi.fn();
@@ -101,7 +130,7 @@ describe('TotalsView — DTS reconciliation', () => {
         expenses={[]}
         segments={[]}
         expected={{}}
-        accountExpected={{ gtcc: null, personal: null }}
+        accountExpected={{ gtcc: null, personal: null, total: null }}
         onSetDts={onSetDts}
         onSetAccountDts={onSetAccountDts}
       />,
@@ -109,6 +138,12 @@ describe('TotalsView — DTS reconciliation', () => {
 
     await user.type(screen.getByLabelText('DTS USD total for LODGING'), '5');
     expect(onSetDts).toHaveBeenLastCalledWith('LODGING', 5);
+
+    await user.type(
+      screen.getByLabelText('DTS USD total for all expenses'),
+      '3',
+    );
+    expect(onSetAccountDts).toHaveBeenLastCalledWith('total', 3);
 
     await user.type(
       screen.getByLabelText('DTS USD reimbursement for GTCC'),
@@ -134,8 +169,8 @@ describe('TotalsView — USD-incomplete warning', () => {
     );
 
     expect(screen.getAllByText('1 missing USD')).toHaveLength(3); // LODGING + Total + GTCC rows
-    expect(screen.getAllByText('1 row with missing USD')).toHaveLength(2); // per-section summary
-
+    expect(screen.getByText('1 row with missing USD')).toBeInTheDocument(); // category section
+    expect(screen.getByText('2 rows with missing USD')).toBeInTheDocument(); // account section: Total + GTCC
   });
 
   it('does not flag rows once USD is filled in', () => {
@@ -166,14 +201,12 @@ describe('TotalsView — all-expenses subtotal', () => {
     expect(screen.getByText('$700.00')).toBeInTheDocument(); // 500 + 200
   });
 
-  it('has no DTS input tied to the Total row', () => {
+  it('has its own DTS input, consistent with GTCC/Personal', () => {
     render(<Harness expenses={[]} />);
 
     expect(
-      screen.queryByLabelText(/DTS USD (total|reimbursement) for Total/i),
-    ).toBeNull();
-    // Only the two real DTS inputs on this screen (category + account each
-    // have their own sections); the Total row contributes none.
+      screen.getByLabelText('DTS USD total for all expenses'),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('DTS USD reimbursement for GTCC')).toBeInTheDocument();
     expect(screen.getByLabelText('DTS USD reimbursement for Personal')).toBeInTheDocument();
   });

@@ -45,7 +45,7 @@ export function buildCsv(
   expenses: Expense[],
   segments: MieSegment[],
   expected: DtsExpected = {},
-  accountExpected: DtsAccountExpected = { gtcc: null, personal: null },
+  accountExpected: DtsAccountExpected = { gtcc: null, personal: null, total: null },
 ): string {
   const report = buildReport(expenses, segments, expected, accountExpected);
   const lines: string[] = [];

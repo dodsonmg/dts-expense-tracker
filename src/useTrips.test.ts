@@ -102,7 +102,7 @@ describe('useTrips', () => {
         expenses: [exp({ note: 'restored one' })],
         segments: [],
         dtsExpected: {},
-        dtsAccountExpected: { gtcc: null, personal: null },
+        dtsAccountExpected: { gtcc: null, personal: null, total: null },
       },
       {
         id: 'r2',
@@ -111,7 +111,7 @@ describe('useTrips', () => {
         expenses: [exp({ note: 'restored two' })],
         segments: [],
         dtsExpected: {},
-        dtsAccountExpected: { gtcc: null, personal: null },
+        dtsAccountExpected: { gtcc: null, personal: null, total: null },
       },
     ];
 

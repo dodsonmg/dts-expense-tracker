@@ -63,6 +63,15 @@ export function reconcileAccounts(
   ];
 }
 
+// Reconciles the all-expenses grand total (GTCC + Personal, USD), independent
+// of the GTCC/Personal split reconciled by reconcileAccounts above.
+export function reconcileAccountTotal(
+  app: AccountTotals,
+  expected: DtsAccountExpected,
+): Reconcile {
+  return compare(app.gtcc.usd + app.personal.usd, expected.total);
+}
+
 // Count of mismatched USD cells across the given reconcile rows.
 export function mismatchCount(
   rows: { usd: Reconcile }[],

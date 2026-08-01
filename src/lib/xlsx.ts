@@ -39,7 +39,7 @@ export async function buildXlsx(
   expenses: Expense[],
   segments: MieSegment[],
   expected: DtsExpected = {},
-  accountExpected: DtsAccountExpected = { gtcc: null, personal: null },
+  accountExpected: DtsAccountExpected = { gtcc: null, personal: null, total: null },
 ): Promise<ArrayBuffer> {
   const { default: ExcelJS } = await import('exceljs');
   const report = buildReport(expenses, segments, expected, accountExpected);

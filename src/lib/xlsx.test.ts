@@ -62,7 +62,7 @@ describe('buildXlsx', () => {
       ],
       [],
       { LODGING: 90 },
-      { gtcc: 90, personal: null },
+      { gtcc: 90, personal: null, total: null },
     );
     const wb = await readBack(buf);
 
@@ -103,7 +103,7 @@ describe('buildXlsx', () => {
       ],
       [],
       { LODGING: 0 },
-      { gtcc: 0, personal: null },
+      { gtcc: 0, personal: null, total: null },
     );
     const wb = await readBack(buf);
 

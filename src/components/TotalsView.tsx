@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import type {
-  Account,
   Category,
   DtsAccountExpected,
   DtsExpected,
@@ -17,6 +16,7 @@ import {
 import {
   reconcileCategories,
   reconcileAccounts,
+  reconcileAccountTotal,
   mismatchCount,
   type Reconcile,
 } from '../lib/reconcile';
@@ -27,7 +27,10 @@ interface Props {
   expected: DtsExpected;
   accountExpected: DtsAccountExpected;
   onSetDts: (category: Category, value: number | null) => void;
-  onSetAccountDts: (account: Account, value: number | null) => void;
+  onSetAccountDts: (
+    key: keyof DtsAccountExpected,
+    value: number | null,
+  ) => void;
 }
 
 function parseAmount(raw: string): number | null {
@@ -51,19 +54,22 @@ export function TotalsView({
   const byAccount = totalsByAccount(expenses, segments);
   const categoryRecon = reconcileCategories(byCategory, expected);
   const accountRecon = reconcileAccounts(byAccount, accountExpected);
+  const totalRecon = reconcileAccountTotal(byAccount, accountExpected);
   const catMismatches = mismatchCount(categoryRecon);
-  const acctMismatches = mismatchCount(accountRecon);
+  const acctMismatches = mismatchCount([
+    ...accountRecon,
+    { usd: totalRecon },
+  ]);
 
   const catPending = usdPendingCountsByCategory(expenses);
   const acctPending = usdPendingCountsByAccount(expenses);
   const catIncomplete = [...catPending.values()].filter((n) => n > 0).length;
-  const acctIncomplete =
-    (acctPending.gtcc > 0 ? 1 : 0) + (acctPending.personal > 0 ? 1 : 0);
-
-  // All expenses, USD, before the GTCC/personal split — informational only,
-  // not a DTS reconciliation target (DtsAccountExpected has no grand-total field).
-  const totalUsd = byAccount.gtcc.usd + byAccount.personal.usd;
+  // All expenses, USD, before the GTCC/personal split.
   const totalPendingCount = acctPending.gtcc + acctPending.personal;
+  const acctIncomplete =
+    (totalPendingCount > 0 ? 1 : 0) +
+    (acctPending.gtcc > 0 ? 1 : 0) +
+    (acctPending.personal > 0 ? 1 : 0);
 
   return (
     <div className="stack">
@@ -127,21 +133,23 @@ export function TotalsView({
           </p>
         )}
         <div className="recon">
-          <div className="recon__row recon__row--total">
-            <span className="recon__name">
-              Total
-              {totalPendingCount > 0 && (
-                <span className="tag tag--warn">
-                  {totalPendingCount} missing USD
-                </span>
-              )}
-            </span>
-            <span className="recon__app recon__app--total">
-              {money(totalUsd, 'USD')}
-            </span>
-            <span />
-            <span />
-          </div>
+          <ReconLine
+            label={
+              <>
+                Total
+                {totalPendingCount > 0 && (
+                  <span className="tag tag--warn">
+                    {totalPendingCount} missing USD
+                  </span>
+                )}
+              </>
+            }
+            rec={totalRecon}
+            usdPendingCount={totalPendingCount}
+            value={accountExpected.total}
+            ariaLabel="DTS USD total for all expenses"
+            onChange={(v) => onSetAccountDts('total', v)}
+          />
           <ReconLine
             label={
               <>
