@@ -105,7 +105,9 @@ Two tables, GBP and USD kept separate throughout:
    the totals DTS shows. M&IE row is fed from the per-diem calculator (USD).
 2. **By account** — GTCC vs Personal, used to verify the split disbursement
    (GTCC charges repay the card; out-of-pocket goes to the bank).
-   **M&IE always counts toward Personal.**
+   **M&IE always counts toward Personal.** A display-only **Total** row (USD,
+   GTCC + Personal) sits above the split — informational only, not a DTS
+   reconciliation target.
 
 ## Screens (MVP)
 

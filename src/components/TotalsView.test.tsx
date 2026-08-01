@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TotalsView } from './TotalsView';
 import type {
@@ -133,7 +133,7 @@ describe('TotalsView — USD-incomplete warning', () => {
       />,
     );
 
-    expect(screen.getAllByText('1 missing USD')).toHaveLength(2); // LODGING + GTCC rows
+    expect(screen.getAllByText('1 missing USD')).toHaveLength(3); // LODGING + Total + GTCC rows
     expect(screen.getAllByText('1 row with missing USD')).toHaveLength(2); // per-section summary
 
   });
@@ -147,5 +147,53 @@ describe('TotalsView — USD-incomplete warning', () => {
       />,
     );
     expect(screen.queryByText(/missing USD/)).toBeNull();
+  });
+});
+
+describe('TotalsView — all-expenses subtotal', () => {
+  it('shows a Total row above GTCC/Personal, summing both accounts in USD', () => {
+    render(
+      <Harness
+        expenses={[
+          exp({ category: 'LODGING', payment: 'GTCC', amount_usd: 500 }),
+          exp({ category: 'TRANSPORT', payment: 'personal', amount_usd: 200 }),
+        ]}
+      />,
+    );
+
+    const rows = screen.getAllByText(/^(Total|GTCC|Personal)$/);
+    expect(rows.map((r) => r.textContent)).toEqual(['Total', 'GTCC', 'Personal']);
+    expect(screen.getByText('$700.00')).toBeInTheDocument(); // 500 + 200
+  });
+
+  it('has no DTS input tied to the Total row', () => {
+    render(<Harness expenses={[]} />);
+
+    expect(
+      screen.queryByLabelText(/DTS USD (total|reimbursement) for Total/i),
+    ).toBeNull();
+    // Only the two real DTS inputs on this screen (category + account each
+    // have their own sections); the Total row contributes none.
+    expect(screen.getByLabelText('DTS USD reimbursement for GTCC')).toBeInTheDocument();
+    expect(screen.getByLabelText('DTS USD reimbursement for Personal')).toBeInTheDocument();
+  });
+
+  it('carries the incomplete tag when either account has USD-pending expenses', () => {
+    render(
+      <Harness
+        expenses={[
+          exp({
+            category: 'LODGING',
+            payment: 'GTCC',
+            amount_gbp: 80,
+            amount_usd: null,
+          }),
+        ]}
+      />,
+    );
+
+    const totalRow = screen.getByText('Total').closest('.recon__row');
+    expect(totalRow).not.toBeNull();
+    expect(within(totalRow as HTMLElement).getByText('1 missing USD')).toBeInTheDocument();
   });
 });

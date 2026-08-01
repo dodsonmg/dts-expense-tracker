@@ -60,6 +60,11 @@ export function TotalsView({
   const acctIncomplete =
     (acctPending.gtcc > 0 ? 1 : 0) + (acctPending.personal > 0 ? 1 : 0);
 
+  // All expenses, USD, before the GTCC/personal split — informational only,
+  // not a DTS reconciliation target (DtsAccountExpected has no grand-total field).
+  const totalUsd = byAccount.gtcc.usd + byAccount.personal.usd;
+  const totalPendingCount = acctPending.gtcc + acctPending.personal;
+
   return (
     <div className="stack">
       <section>
@@ -122,6 +127,21 @@ export function TotalsView({
           </p>
         )}
         <div className="recon">
+          <div className="recon__row recon__row--total">
+            <span className="recon__name">
+              Total
+              {totalPendingCount > 0 && (
+                <span className="tag tag--warn">
+                  {totalPendingCount} missing USD
+                </span>
+              )}
+            </span>
+            <span className="recon__app recon__app--total">
+              {money(totalUsd, 'USD')}
+            </span>
+            <span />
+            <span />
+          </div>
           <ReconLine
             label={
               <>

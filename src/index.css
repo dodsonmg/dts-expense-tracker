@@ -563,6 +563,14 @@ h2 {
 .recon__row--mismatch .recon__input {
   border-color: var(--danger);
 }
+/* Display-only grand total (no DTS input/flag columns to fill). */
+.recon__row--total {
+  background: var(--surface-2);
+}
+.recon__row--total .recon__app--total {
+  color: var(--text);
+  font-weight: 700;
+}
 /* USD-pending data makes the comparison premature: yellow wins over the
    red/green status border (see #14). */
 .recon__row--incomplete .recon__input {
