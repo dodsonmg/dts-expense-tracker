@@ -455,7 +455,8 @@ select:focus {
 }
 
 /* ---- Help/FAQ ---- */
-.help-steps {
+.help-steps,
+.help-faq-list {
   margin: 0.6rem 0;
   padding-left: 1.3rem;
   display: flex;

@@ -5,10 +5,18 @@
 // that file is the source of truth for how the app actually behaves; this is
 // just a friendlier restatement of it. There's no automated check for drift,
 // so re-read it when either changes.
-const FAQS: { q: string; a: string }[] = [
+const FAQS: { q: string; a: string | string[] }[] = [
   {
     q: 'What’s the expected workflow?',
-    a: 'Start (or switch to) a trip using the switcher in the header. Capture expenses as they happen on the Entry tab — plus M&IE per-diem and MILEAGE legs on their own tabs. As charges land in DTS, check them off on the List tab. At the end of the trip, read DTS’s own totals and type them into the Totals tab to reconcile. Then export the formatted spreadsheet to bring to the office.',
+    a: [
+      'Start (or switch to) a trip using the switcher in the header.',
+      'Capture expenses as they happen on Entry, including MILEAGE — it’s an itemized expense like any other, just defaulting to a miles × rate calculator instead of a typed amount.',
+      'For UK trips: record the GBP amount from the receipt right away, then backfill the USD amount on List once the charge actually lands on the card.',
+      'Log M&IE per-diem segments on their own tab.',
+      'As charges land on your card / in DTS, check expenses off on List.',
+      'At the end of the trip, read DTS’s own totals and enter them on Totals to reconcile.',
+      'Or, skip the in-app reconciliation and export the formatted spreadsheet straight away — it carries the same DTS comparison, for reconciling at the office instead.',
+    ],
   },
   {
     q: 'How do multiple trips work?',
@@ -72,7 +80,15 @@ export function HelpView() {
         {FAQS.map(({ q, a }) => (
           <details key={q} className="card">
             <summary>{q}</summary>
-            <p className="muted small">{a}</p>
+            {Array.isArray(a) ? (
+              <ul className="muted small help-faq-list">
+                {a.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">{a}</p>
+            )}
           </details>
         ))}
       </div>
