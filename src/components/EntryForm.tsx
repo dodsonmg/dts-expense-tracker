@@ -112,6 +112,13 @@ export function EntryForm({ onAdd, onDone }: Props) {
         </button>
       )}
 
+      {category === 'LODGING' && (
+        <p className="muted small">
+          Tip: enter room rate and lodging tax as separate rows so they
+          reconcile individually against DTS.
+        </p>
+      )}
+
       {useCalculator ? (
         <>
           <div className="field-row">

@@ -215,6 +215,13 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
             : 'Enter USD manually instead'}
         </button>
       )}
+
+      {category === 'LODGING' && (
+        <p className="muted small">
+          Tip: enter room rate and lodging tax as separate rows so they
+          reconcile individually against DTS.
+        </p>
+      )}
       {useCalculator ? (
         <>
           <div className="field-row">

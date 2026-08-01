@@ -214,6 +214,27 @@ describe('ExpenseList — MILEAGE calculator', () => {
     expect(screen.queryByLabelText('Miles')).toBeNull();
   });
 
+  it('EditRow shows the lodging tax reminder for a LODGING row, not other categories', async () => {
+    const user = userEvent.setup();
+    render(
+      <ExpenseList
+        expenses={[
+          exp({ id: 'a', category: 'LODGING' }),
+          exp({ id: 'b', category: 'TRANSPORT' }),
+        ]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('LODGING'));
+    expect(screen.getByText(/separate rows/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByText('TRANSPORT'));
+    expect(screen.queryByText(/separate rows/i)).toBeNull();
+  });
+
   it('defaults to manual mode for a MILEAGE row with no miles set (legacy/manual entry)', async () => {
     const user = userEvent.setup();
     render(
