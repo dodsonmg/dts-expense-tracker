@@ -135,7 +135,7 @@ export function buildCsv(
   lines.push(
     row(['account', 'gbp', 'usd', 'dts_usd', 'delta_usd', 'status', 'usd_incomplete']),
   );
-  for (const a of report.accounts) {
+  for (const a of [report.accountTotal, ...report.accounts]) {
     lines.push(
       row([
         a.label,

@@ -15,7 +15,12 @@ import {
   usdPendingCountsByCategory,
   usdPendingCountsByAccount,
 } from './totals';
-import { reconcileCategories, reconcileAccounts, type Reconcile } from './reconcile';
+import {
+  reconcileCategories,
+  reconcileAccounts,
+  reconcileAccountTotal,
+  type Reconcile,
+} from './reconcile';
 
 // A single structured model of an export, so the CSV and XLSX exporters render
 // from the same numbers and never drift.
@@ -59,12 +64,23 @@ export interface ReportAccountRow {
   recon: Reconcile;
 }
 
+// The all-expenses grand total (GTCC + Personal), reconciled independently of
+// the split above. Not keyed by Account — see DtsAccountExpected.total.
+export interface ReportTotalRow {
+  label: string; // 'Total'
+  gbp: number;
+  usd: number;
+  usdPendingCount: number;
+  recon: Reconcile;
+}
+
 export interface Report {
   expenses: ReportExpenseRow[];
   segments: ReportSegmentRow[];
   mieTotalUsd: number;
   categories: ReportCategoryRow[];
   accounts: ReportAccountRow[];
+  accountTotal: ReportTotalRow;
 }
 
 export function buildReport(
@@ -80,6 +96,7 @@ export function buildReport(
   const catPending = usdPendingCountsByCategory(expenses);
   const byAccount = totalsByAccount(expenses, segments);
   const acctRecon = reconcileAccounts(byAccount, accountExpected);
+  const acctTotalRecon = reconcileAccountTotal(byAccount, accountExpected);
   const acctPending = usdPendingCountsByAccount(expenses);
 
   return {
@@ -129,5 +146,12 @@ export function buildReport(
         recon: acctRecon[1].usd,
       },
     ],
+    accountTotal: {
+      label: 'Total',
+      gbp: byAccount.gtcc.gbp + byAccount.personal.gbp,
+      usd: byAccount.gtcc.usd + byAccount.personal.usd,
+      usdPendingCount: acctPending.gtcc + acctPending.personal,
+      recon: acctTotalRecon,
+    },
   };
 }

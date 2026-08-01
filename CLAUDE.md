@@ -154,7 +154,9 @@ npm test           # vitest run
 `buildCsv` emits one file: `EXPENSES` rows (with `usd_pending`,
 `entered_in_dts`, and `miles`/`rate` — MILEAGE-only, blank elsewhere —
 columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
-then `TOTALS BY ACCOUNT`. The two totals blocks carry the DTS comparison
+then `TOTALS BY ACCOUNT` (a `Total` row — GTCC + Personal, reconciled
+independently via `reconcileAccountTotal` — first, then `GTCC`/`Personal`).
+The two totals blocks carry the DTS comparison
 (`dts_usd`, `delta_usd`, `status` where status is `MISMATCH` / `ok` / blank) and
 a `usd_incomplete` (`yes`/blank) flag, so the emailed sheet works as the
 office's reconciliation view. Money cells are plain 2-dp numbers (or blank) —
