@@ -7,6 +7,7 @@ import {
   loadDtsAccountExpected,
   loadDtsExpected,
   loadExpenses,
+  loadLastBackup,
   loadSegments,
   loadTrips,
   saveActiveTripId,
@@ -14,6 +15,7 @@ import {
   saveDtsAccountExpected,
   saveDtsExpected,
   saveExpenses,
+  saveLastBackup,
   saveSegments,
   saveTrips,
 } from './db';
@@ -178,5 +180,17 @@ describe('trip list persistence', () => {
 
   it('returns null when never initialized', async () => {
     expect(await loadTrips()).toBeNull();
+  });
+});
+
+describe('lastBackup persistence', () => {
+  it('round-trips the last-backup snapshot', async () => {
+    const info = { at: '2026-08-01T00:00:00.000Z', expenseCount: 12 };
+    await saveLastBackup(info);
+    expect(await loadLastBackup()).toEqual(info);
+  });
+
+  it('returns null when never backed up', async () => {
+    expect(await loadLastBackup()).toBeNull();
   });
 });

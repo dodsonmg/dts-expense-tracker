@@ -19,6 +19,7 @@ describe('TripSwitcher', () => {
         onCreate={vi.fn()}
         onRename={vi.fn()}
         onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
       />,
     );
     expect(screen.getByText(/Trip: London Aug 2026/)).toBeInTheDocument();
@@ -35,6 +36,7 @@ describe('TripSwitcher', () => {
         onCreate={vi.fn()}
         onRename={vi.fn()}
         onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Trip: London/ }));
@@ -52,6 +54,7 @@ describe('TripSwitcher', () => {
         onCreate={vi.fn()}
         onRename={vi.fn()}
         onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Trip: London/ }));
@@ -71,6 +74,7 @@ describe('TripSwitcher', () => {
         onCreate={vi.fn()}
         onRename={onRename}
         onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Trip: London/ }));
@@ -93,6 +97,7 @@ describe('TripSwitcher', () => {
         onCreate={onCreate}
         onRename={vi.fn()}
         onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Trip: London/ }));
@@ -113,6 +118,7 @@ describe('TripSwitcher', () => {
         onCreate={vi.fn()}
         onRename={vi.fn()}
         onDelete={onDelete}
+        onSetArchived={vi.fn()}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Trip: London/ }));
@@ -134,9 +140,51 @@ describe('TripSwitcher', () => {
         onCreate={vi.fn()}
         onRename={vi.fn()}
         onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
       />,
     );
     await user.click(screen.getByRole('button', { name: /Trip: London/ }));
     expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+  });
+
+  it('archives a trip', async () => {
+    const user = userEvent.setup();
+    const onSetArchived = vi.fn();
+    render(
+      <TripSwitcher
+        trips={trips}
+        activeTripId="a"
+        onSelect={vi.fn()}
+        onCreate={vi.fn()}
+        onRename={vi.fn()}
+        onDelete={vi.fn()}
+        onSetArchived={onSetArchived}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /Trip: London/ }));
+    await user.click(screen.getAllByRole('button', { name: 'Archive' })[0]);
+    expect(onSetArchived).toHaveBeenCalledWith('a', true);
+  });
+
+  it('hides archived trips by default, behind a "Show archived" toggle', async () => {
+    const user = userEvent.setup();
+    const withArchived = [trips[0], { ...trips[1], archived: true }];
+    render(
+      <TripSwitcher
+        trips={withArchived}
+        activeTripId="a"
+        onSelect={vi.fn()}
+        onCreate={vi.fn()}
+        onRename={vi.fn()}
+        onDelete={vi.fn()}
+        onSetArchived={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /Trip: London/ }));
+    expect(screen.queryByRole('button', { name: 'Ramstein Sep 2026' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Show archived/ }));
+    expect(screen.getByRole('button', { name: 'Ramstein Sep 2026' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Unarchive' })).toBeInTheDocument();
   });
 });

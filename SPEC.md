@@ -195,3 +195,17 @@ Two tables, GBP and USD kept separate throughout:
 **Phase 4 — nice-to-haves**
 12. Receipt photos.
 13. Interactive laptop reconciliation via file import / self-contained HTML export.
+
+**Phase 5 — trip archiving & backup nudge**
+14. ~~Archive/unarchive a trip.~~ **Done** — `Trip.archived` (additive, no
+    migration). Archived trips are hidden from the header `TripSwitcher`'s
+    default list (revealed via "Show archived") and from the "at least one
+    trip" guard's exemption list, but never deleted and remain fully usable
+    if still active — orthogonal to trip deletion, which still requires
+    keeping at least one trip regardless of archived status.
+15. ~~A reminder to actually use the whole-device backup.~~ **Done** — a
+    dismissible toast (mirroring the PWA update toast) nudges toward the
+    Export tab's backup panel once it's been a while *and* enough expenses
+    have changed across every trip since the last backup or restore, so
+    light users aren't nagged. `db.ts`'s `lastBackup` key (additive) tracks
+    the baseline; dismissal is session-only.

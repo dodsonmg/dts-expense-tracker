@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { DtsAccountExpected, DtsExpected, Expense, MieSegment } from '../types';
+import type { LastBackupInfo } from '../db';
 import { buildCsv, csvFilename } from '../lib/csv';
 import { buildXlsx, xlsxFilename, XLSX_MIME } from '../lib/xlsx';
 import { backupFilename, BackupParseError, parseBackup, type Backup } from '../lib/backup';
@@ -12,6 +13,15 @@ interface Props {
   accountExpected: DtsAccountExpected;
   onDownloadBackup: () => Promise<string>;
   onRestore: (backup: Backup) => void | Promise<void>;
+  lastBackup: LastBackupInfo | null;
+  onBackedUp: () => void;
+}
+
+function relativeDays(at: string): string {
+  const days = Math.floor((Date.now() - Date.parse(at)) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days} days ago`;
 }
 
 // Export to email to self. A formatted .xlsx (reconciliation tables at the top)
@@ -25,6 +35,8 @@ export function ExportView({
   accountExpected,
   onDownloadBackup,
   onRestore,
+  lastBackup,
+  onBackedUp,
 }: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -89,6 +101,7 @@ export function ExportView({
   async function downloadBackupFile() {
     const json = await onDownloadBackup();
     downloadBlob(new Blob([json], { type: 'application/json' }), backupFilename());
+    onBackedUp();
   }
 
   async function handleBackupFile(file: File) {
@@ -113,6 +126,7 @@ export function ExportView({
     // any local status set right before that. App.tsx owns that
     // confirmation instead, in a banner that survives the remount.
     await onRestore(pendingRestore);
+    onBackedUp();
     setPendingRestore(null);
   }
 
@@ -178,6 +192,10 @@ export function ExportView({
           expenses, M&amp;IE segments, and DTS totals) as a single JSON file —
           for moving to a new device, not for the office. Restoring{' '}
           <strong>replaces</strong> every trip currently on this device.
+        </p>
+
+        <p className="muted small">
+          Last backup: {lastBackup ? relativeDays(lastBackup.at) : 'never'}
         </p>
 
         <button type="button" className="btn" onClick={() => void downloadBackupFile()}>

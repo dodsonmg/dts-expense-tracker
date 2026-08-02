@@ -92,6 +92,11 @@ body {
   color: var(--accent);
   font-weight: 600;
 }
+.trip-switch__archived-toggle {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
 
 /* ---- PWA update/offline-ready banner ---- */
 .update-toast {

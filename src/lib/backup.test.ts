@@ -53,6 +53,15 @@ describe('buildBackup / parseBackup (v2, multi-trip)', () => {
     expect(parsed.exportedAt).not.toBe('');
   });
 
+  it('round-trips a trip\'s archived status', () => {
+    const trips = [tripBackup({ archived: true }), tripBackup({ id: 't2', archived: false })];
+    const json = buildBackup(trips);
+    const parsed = parseBackup(json);
+
+    expect(parsed.trips[0].archived).toBe(true);
+    expect(parsed.trips[1].archived).toBe(false);
+  });
+
   it('names the file with today\'s date', () => {
     const name = backupFilename(new Date('2026-07-06T12:00:00Z'));
     expect(name).toBe('dts-backup-2026-07-06.json');

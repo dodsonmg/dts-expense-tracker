@@ -26,7 +26,16 @@ const tripKey = (tripId: string, field: TripField) => `trip:${tripId}:${field}`;
 const GLOBAL_KEYS = {
   trips: 'trips',
   activeTripId: 'activeTripId',
+  lastBackup: 'lastBackup',
 } as const;
+
+// Snapshot of the device's data as of the last successful backup or
+// restore, used by the backup nudge to compute days/edits since then.
+// Absent (null) means "never backed up" — additive key, no migration.
+export interface LastBackupInfo {
+  at: string; // ISO timestamp
+  expenseCount: number; // total expenses across all trips at that moment
+}
 
 // Pre-multi-trip flat keys. Read only once, by ensureInitialized, to migrate
 // an existing single-trip user's data into a synthetic first trip. Never
@@ -167,6 +176,14 @@ export async function loadActiveTripId(): Promise<string | null> {
 
 export async function saveActiveTripId(id: string): Promise<void> {
   await store.setItem(GLOBAL_KEYS.activeTripId, id);
+}
+
+export async function loadLastBackup(): Promise<LastBackupInfo | null> {
+  return store.getItem<LastBackupInfo>(GLOBAL_KEYS.lastBackup);
+}
+
+export async function saveLastBackup(info: LastBackupInfo): Promise<void> {
+  await store.setItem(GLOBAL_KEYS.lastBackup, info);
 }
 
 // Runs once, on first load after multi-trip shipped. If `trips` already

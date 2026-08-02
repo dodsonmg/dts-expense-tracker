@@ -23,6 +23,14 @@ const FAQS: { q: string; a: string | string[] }[] = [
     a: 'Tap the trip name in the header to switch trips, rename one, or start a new one — each trip keeps its own expenses, M&IE segments, and DTS totals completely separate. There’s always at least one trip; deleting the last one isn’t allowed. Export and the per-trip filename always reflect whichever trip is active. A whole-device backup covers every trip at once, restoring replaces all of them together.',
   },
   {
+    q: 'What does "Archive" do to a trip?',
+    a: 'It retires a finished trip without deleting anything — an archived trip disappears from the header switcher’s default list (tap "Show archived" to see it again, or to unarchive it) and stays fully usable if it’s still the active trip. Unlike Delete, it’s reversible and never touches your data.',
+  },
+  {
+    q: 'What’s the "It’s been X days since your last backup" reminder?',
+    a: 'A gentle nudge, not a requirement — it only shows up once it’s been a while and you’ve made a meaningful number of changes since your last backup or restore. Dismissing it just hides it for this visit; it comes back next time you open the app if you’re still overdue. Tap "Back up now" to jump straight to the Export tab’s backup panel.',
+  },
+  {
     q: 'Why aren’t GBP and USD ever added together?',
     a: 'They’re different things: GBP is what the receipt says at the time of purchase, USD is what actually lands on the card (or what DTS reimburses). No conversion happens anywhere in the app — totals always keep the two currencies in separate columns.',
   },

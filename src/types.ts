@@ -61,6 +61,10 @@ export interface Trip {
   id: string;
   name: string;
   createdAt: string; // ISO timestamp
+  // A completed/retired trip. Hides it from TripSwitcher's default list, but
+  // never deletes its data — orthogonal to deleteTrip, and reversible.
+  // Undefined means not archived.
+  archived?: boolean;
 }
 
 // A trip's identity plus its full data — the unit both whole-device backup

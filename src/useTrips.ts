@@ -76,15 +76,35 @@ export function useTrips() {
     });
   }, []);
 
+  // Archiving never deletes data and is reversible, unlike deleteTrip — no
+  // "last trip" guard here. Archiving the active trip falls back to another
+  // visible trip if one exists; if it was the last non-archived trip,
+  // activeTripId stays put (an archived-and-active trip still works
+  // normally in every tab).
+  const setArchived = useCallback((id: string, archived: boolean) => {
+    setTrips((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, archived } : t));
+      if (archived) {
+        setActiveTripIdState((cur) => {
+          if (cur !== id) return cur;
+          const fallback = next.find((t) => t.id !== id && !t.archived);
+          return fallback?.id ?? cur;
+        });
+      }
+      return next;
+    });
+  }, []);
+
   // Whole-device restore (issue #7 v2). Writes every trip's data directly to
   // storage, replaces the trip list/active id, and bumps reloadEpoch so
   // useTripData re-fetches even if activeTripId happens not to change.
   const restoreFromBackup = useCallback(async (backup: Backup) => {
     await saveAllTripsData(backup.trips);
-    const newTrips: Trip[] = backup.trips.map(({ id, name, createdAt }) => ({
+    const newTrips: Trip[] = backup.trips.map(({ id, name, createdAt, archived }) => ({
       id,
       name,
       createdAt,
+      archived,
     }));
     setTrips(newTrips);
     setActiveTripIdState(newTrips[0]?.id ?? '');
@@ -114,6 +134,7 @@ export function useTrips() {
     createTrip,
     renameTrip,
     deleteTrip,
+    setArchived,
     restoreFromBackup,
     loadAllTripsData,
   };

@@ -29,9 +29,9 @@ npm test           # vitest run
 ## Architecture
 
 - `src/types.ts` — domain types + the fixed `CATEGORIES` list/order, plus
-  `isUsdPending`. Also `Trip` (id/name/createdAt) and `TripBackup` (a `Trip`
-  plus its full data — the unit whole-device backup and bulk restore operate
-  on). Single source of truth for the data model.
+  `isUsdPending`. Also `Trip` (id/name/createdAt/`archived`) and `TripBackup`
+  (a `Trip` plus its full data — the unit whole-device backup and bulk
+  restore operate on). Single source of truth for the data model.
 - `src/db.ts` — IndexedDB load/save, one localforage instance. Per-trip data
   (expenses/segments/DTS totals) lives under `trip:<id>:<field>`-prefixed
   keys, not one instance per trip (no registry to enumerate those). Also owns
@@ -40,15 +40,28 @@ npm test           # vitest run
   whatever the pre-multi-trip flat keys contain (empty for a fresh install,
   real data for an upgrading user) into one synthetic trip. Those legacy flat
   keys are never deleted (cheap safety net) and never read again afterward.
+  Also owns the `lastBackup` key (`LastBackupInfo`: `{ at, expenseCount }`),
+  the baseline the backup nudge compares against — additive, no migration.
 - `src/useTrips.ts` — owns the trip list, active trip id, and
-  create/rename/delete/select. A device always has ≥1 trip — `deleteTrip` is
-  a no-op if it's the last one. `restoreFromBackup` writes every trip's data
-  from a whole-device backup and bumps `reloadEpoch` (see below).
+  create/rename/delete/select/`setArchived`. A device always has ≥1 trip —
+  `deleteTrip` is a no-op if it's the last one, regardless of archived
+  status. `restoreFromBackup` writes every trip's data from a whole-device
+  backup and bumps `reloadEpoch` (see below).
 - `src/useTripData.ts` — one trip's data: `useTripData(tripId, reloadEpoch)`.
   Reloads when `tripId` changes (switching trips) or `reloadEpoch` changes (a
   restore preserves trip ids, so `activeTripId` may not change — the epoch
   forces a re-fetch anyway). `App` composes both hooks and passes slices
   down; components are otherwise presentational.
+- `src/useAllTripsData.ts` — read-only, cross-trip counterpart to
+  `useTripData`: loads every given trip's expenses (keyed by trip id), used
+  only for the backup nudge's edit count. Never persists. `App` patches in
+  the active trip's live edits via `setExpensesForTrip` so the count doesn't
+  go stale between trip switches, without an extra IndexedDB read.
+- `src/useBackupNudge.ts` — nudges toward a backup only once both a day and
+  an edit-count threshold since the last one are crossed (`useAllTripsData`'s
+  total expense count vs. `db.ts`'s `lastBackup` baseline); `dismiss()` is
+  session-only, `markBackedUp()` resets both baselines. Called after both a
+  successful backup download and a successful restore (`ExportView`).
 - `src/lib/` — pure functions, no React:
   - `id.ts` — shared `newId()` (used by both trip hooks).
   - `mie.ts` — M&IE per-diem math.
@@ -80,8 +93,10 @@ npm test           # vitest run
   `MieView`, `TotalsView`, `ExportView`, `HelpView` (static FAQ content, no
   props — the one screen that isn't fed by `useTripData()`), plus
   `TripSwitcher` (mounted in the header, not a tab — reachable from every
-  screen). `App.tsx` is the tab shell; it also mounts `UpdateToast` (see
-  below).
+  screen; also the archive/unarchive control, with a "Show archived" toggle
+  for its default-hidden rows), `UpdateToast`, and `BackupNudgeToast`.
+  `App.tsx` is the tab shell; it also mounts `UpdateToast` and
+  `BackupNudgeToast` (see below).
 
 ## Domain invariants — get these wrong and the tool is misleading
 
@@ -148,6 +163,18 @@ npm test           # vitest run
     to design for anywhere else in the app. A fresh install or an upgrading
     single-trip user both get exactly one trip via `db.ts`'s
     `ensureInitialized`, auto-created/migrated with no naming prompt.
+12. **Archiving a trip never deletes its data.** `Trip.archived` just hides
+    it from `TripSwitcher`'s default list — it stays reachable via "Show
+    archived," remains fully usable if it's the active trip, and is
+    orthogonal to `deleteTrip`'s "at least one trip" invariant (which counts
+    all trips regardless of archived status). `useTrips.setArchived(id,
+    archived)` is the only place that mutates it; archiving the active trip
+    falls back to another visible trip if one exists. `archived` round-trips
+    through whole-device backup/restore like every other `Trip` field (see
+    invariant 10) — `lib/backup.ts`'s `parseBackup` and
+    `useTrips.restoreFromBackup` both carry it through explicitly rather than
+    dropping it, since both reconstruct `Trip` objects field-by-field instead
+    of trusting the parsed JSON shape.
 
 ## Export contract
 
@@ -182,10 +209,15 @@ keeps running the old JS in memory until fully closed and relaunched.
 moment via `vite-plugin-pwa`'s `useRegisterSW()` hook (through the
 `pwaRegister.ts` indirection, see above): a "Update available" banner with a
 Reload button when `needRefresh`, or a "Ready to work offline" confirmation
-when `offlineReady` — both dismissible, neither auto-hides. `HelpView` (the
-`Help` tab) is the install-instructions + FAQ screen; keep its FAQ answers in
-sync with the "Domain invariants" section above when either changes — there's
-no automated check for drift between them.
+when `offlineReady` — both dismissible, neither auto-hides. `BackupNudgeToast`
+(mirroring `UpdateToast`'s mount point/styling, mounted just below it) nudges
+toward the Export tab's backup panel once `useBackupNudge` crosses both its
+day and edit-count thresholds since the last backup or restore — also
+dismissible, no auto-hide, session-only dismissal (reappears next load if
+still overdue). `HelpView` (the `Help` tab) is the install-instructions + FAQ
+screen; keep its FAQ answers in sync with the "Domain invariants" section
+above when either changes — there's no automated check for drift between
+them.
 
 ## Deployment
 
@@ -209,4 +241,6 @@ MVP (this scaffold) is Phase 1. Phases 2–3 in `SPEC.md` are done: DTS
 reconciliation (check-off, mismatch flags, `.xlsx` export), multi-trip +
 backup/restore + MILEAGE calculator + PWA install/offline polish (icon,
 update toast, Help/FAQ tab). Phase 4 — receipt photos and interactive laptop
-import — is not started. Don't pull that work forward without being asked.
+import — is not started; don't pull that work forward without being asked.
+Trip archiving + the backup nudge toast (Phase 5, invariant 12) were added
+beyond the original phased plan.

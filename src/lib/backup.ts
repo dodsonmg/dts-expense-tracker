@@ -145,7 +145,8 @@ export function parseBackup(text: string): Backup {
       throw new BackupParseError(`Trip ${i + 1} is missing its id/name/createdAt.`);
     }
     const data = validateTripData(t, `Trip "${t.name}"`);
-    return { id: t.id, name: t.name, createdAt: t.createdAt, ...data };
+    const archived = typeof t.archived === 'boolean' ? t.archived : undefined;
+    return { id: t.id, name: t.name, createdAt: t.createdAt, archived, ...data };
   });
 
   return { version: BACKUP_VERSION, exportedAt, trips };
