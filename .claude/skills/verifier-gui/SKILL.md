@@ -107,6 +107,19 @@ summarizing every trip in the backup (name + expense count each); only
 file shows an inline error (e.g. `text=/Not a valid JSON file/`) and never
 renders the confirmation card. The backup covers **every trip on the
 device**, not just the active one — restoring replaces the whole trip list.
+The card also shows `text=/Last backup:/` (`'never'`, or a relative
+`'<N> days ago'`/`'today'`/`'yesterday'` string) — updates after a
+successful download or restore.
+
+A separate `BackupNudgeToast` (same `.update-toast` styling/mount point as
+`UpdateToast`, rendered just below it) nudges toward this card once
+`useBackupNudge`'s day/edit-count thresholds are both crossed — not
+reachable from a fresh `localStorage.clear()` bootstrap with few expenses,
+so don't try to force it; confirm via code review or by seeding `db.ts`'s
+`lastBackup` key directly if it genuinely needs visual verification. Text:
+`text=/It's been \d+ days since your last backup/` or `text=/never backed
+up/`, `getByRole('button', { name: 'Back up now' })` (switches to the Export
+tab), dismiss via `getByRole('button', { name: 'Dismiss' })`.
 
 ## Trip switcher
 
@@ -114,14 +127,19 @@ Header control, next to the `<h1>`: `getByRole('button', { name: /^Trip:/ })`
 opens an inline panel (a `.card`, not a portal/modal) listing every trip.
 Within it: `getByRole('button', { name: '<trip name>' })` selects that trip
 and closes the panel; each row also has `getByRole('button', { name: 'Rename'
-})` (swaps to a text input + `Save`/`Cancel`) and `getByRole('button', { name:
-'Delete' })` (shows a nested confirm card, `text=/can't be undone/`, before
-actually calling delete) — `Delete` is `disabled` when only one trip exists.
-`getByRole('button', { name: '＋ New trip' })` reveals a text input +
-`Create`. A fresh `localStorage.clear()` + reload (this skill's standard
-bootstrap) still yields exactly one auto-created default trip (e.g. "Trip
-1"), so existing single-trip verification flows don't need to change their
-assumptions about initial state.
+})` (swaps to a text input + `Save`/`Cancel`), `getByRole('button', { name:
+'Archive' })` (hides the row; button flips to `'Unarchive'`), and
+`getByRole('button', { name: 'Delete' })` (shows a nested confirm card,
+`text=/can't be undone/`, before actually calling delete) — `Delete` is
+`disabled` when only one trip exists (archived trips still count toward that
+minimum). `getByRole('button', { name: '＋ New trip' })` reveals a text input
++ `Create`. Archived trips are hidden from the panel's default list, behind
+`getByRole('button', { name: /Show archived/ })` (label includes a count,
+e.g. `'Show archived (1)'`; flips to `'Hide archived'` when expanded). A
+fresh `localStorage.clear()` + reload (this skill's standard bootstrap) still
+yields exactly one auto-created default trip (e.g. "Trip 1"), so existing
+single-trip verification flows don't need to change their assumptions about
+initial state.
 
 ## PWA update/offline-ready toast
 

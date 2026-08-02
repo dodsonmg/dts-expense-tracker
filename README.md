@@ -36,11 +36,13 @@ product spec.
 - **Multi-trip** — create/rename/delete trips from the header's trip switcher;
   each trip's expenses/M&IE segments/DTS totals are stored separately, and
   export is always scoped to whichever trip is active. A device always has
-  at least one trip.
+  at least one trip. Finished trips can be **archived** (hidden, not
+  deleted) via the same switcher, and unarchived just as easily.
 - **Backup/restore** — a single JSON file with every trip on the device
   (expenses, M&IE segments, DTS totals), for moving to a new phone. Restoring
   **replaces** every trip on the device; a confirmation step shows what will
-  be replaced before it happens.
+  be replaced before it happens. A dismissible toast nudges toward backing up
+  once it's been a while and enough has changed since the last one.
 - **Installable & offline** — "Add to Home Screen"; works with no signal after
   first load. A dismissible toast surfaces when an update is ready to reload,
   or when the app is confirmed ready to work offline.
@@ -91,8 +93,10 @@ mode). Data persists across reloads via IndexedDB.
 src/
   types.ts          Domain model + fixed category set; isUsdPending / isEntered
   db.ts             IndexedDB load/save (localForage), per-trip prefixed keys
-  useTrips.ts       Trip list + active trip id; create/rename/delete/select
+  useTrips.ts       Trip list + active trip id; create/rename/delete/select/archive
   useTripData.ts    One trip's data (keyed by tripId, reloads on trip switch)
+  useAllTripsData.ts  Read-only cross-trip expense counts (backup nudge only)
+  useBackupNudge.ts Dismissible "time to back up" threshold logic
   lib/              Pure logic, no React — unit-tested
     id.ts           Shared id generator (useTrips / useTripData)
     mie.ts          M&IE per-diem math
@@ -105,7 +109,7 @@ src/
     backup.ts       Whole-device JSON backup/restore (all trips; v1→v2 migration)
     format.ts       Currency + date helpers; slugify (export filenames)
   components/       One file per screen (Entry, List, M&IE, Totals, Export,
-                    Help) + TripSwitcher (header) + UpdateToast (banner)
+                    Help) + TripSwitcher (header) + UpdateToast/BackupNudgeToast (banners)
   App.tsx           Tab shell
 scripts/gen-icons.mjs  Rasterizes the hedgehog SVG to every icon size
                        (Playwright/headless Chromium)
@@ -147,7 +151,8 @@ The app icon is regenerated with `npm run gen-icons` (needs
 
 ## Roadmap
 
-**Phase 1 (MVP)**, **Phase 2 (reconciliation)**, and **Phase 3 (multi-trip +
-robustness)** are implemented and deployed. Remaining in [`SPEC.md`](./SPEC.md):
+**Phase 1 (MVP)** through **Phase 3 (multi-trip + robustness)** are implemented
+and deployed, plus **Phase 5 (trip archiving & backup nudge)** — see
+[`SPEC.md`](./SPEC.md) for details. Remaining:
 
 - **Phase 4 — nice-to-haves:** receipt photos, interactive laptop import.
