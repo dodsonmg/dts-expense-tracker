@@ -130,6 +130,75 @@ describe('useTrips', () => {
     expect((await loadExpenses('r2'))[0].note).toBe('restored two');
   });
 
+  it('setArchived archives a trip without deleting its data', async () => {
+    const { result } = renderHook(() => useTrips());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    const id = result.current.trips[0].id;
+
+    act(() => result.current.setArchived(id, true));
+
+    await waitFor(() =>
+      expect(result.current.trips.find((t) => t.id === id)?.archived).toBe(true),
+    );
+    expect(await loadExpenses(id)).toEqual([]);
+  });
+
+  it('archiving the active trip falls back to another visible trip', async () => {
+    const { result } = renderHook(() => useTrips());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    const firstId = result.current.trips[0].id;
+
+    let secondId = '';
+    act(() => {
+      secondId = result.current.createTrip('Second trip');
+    });
+    await waitFor(() => expect(result.current.trips).toHaveLength(2));
+    expect(result.current.activeTripId).toBe(secondId);
+
+    act(() => result.current.setArchived(secondId, true));
+
+    await waitFor(() => expect(result.current.activeTripId).toBe(firstId));
+  });
+
+  it('archiving the last visible trip leaves activeTripId untouched', async () => {
+    const { result } = renderHook(() => useTrips());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    const id = result.current.trips[0].id;
+
+    act(() => result.current.setArchived(id, true));
+
+    await waitFor(() =>
+      expect(result.current.trips.find((t) => t.id === id)?.archived).toBe(true),
+    );
+    expect(result.current.activeTripId).toBe(id);
+  });
+
+  it('restoreFromBackup carries archived status through', async () => {
+    const { result } = renderHook(() => useTrips());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+
+    await act(async () => {
+      await result.current.restoreFromBackup({
+        version: 2,
+        exportedAt: '2026-01-01',
+        trips: [
+          {
+            id: 'r1',
+            name: 'Restored One',
+            createdAt: '2026-01-01',
+            archived: true,
+            expenses: [],
+            segments: [],
+            dtsExpected: {},
+            dtsAccountExpected: { gtcc: null, personal: null },
+          },
+        ],
+      });
+    });
+
+    expect(result.current.trips.find((t) => t.id === 'r1')?.archived).toBe(true);
+  });
+
   it('loadAllTripsData reads every trip\'s data from storage', async () => {
     const { result } = renderHook(() => useTrips());
     await waitFor(() => expect(result.current.loaded).toBe(true));

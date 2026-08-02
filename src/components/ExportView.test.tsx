@@ -42,6 +42,8 @@ describe('ExportView', () => {
         accountExpected={noAccounts}
         onDownloadBackup={vi.fn()}
         onRestore={vi.fn()}
+        lastBackup={null}
+        onBackedUp={vi.fn()}
       />,
     );
     expect(
@@ -63,6 +65,8 @@ describe('ExportView', () => {
         accountExpected={noAccounts}
         onDownloadBackup={vi.fn()}
         onRestore={vi.fn()}
+        lastBackup={null}
+        onBackedUp={vi.fn()}
       />,
     );
     expect(
@@ -73,6 +77,7 @@ describe('ExportView', () => {
 
   it('parses a chosen multi-trip backup and asks for confirmation before restoring', async () => {
     const onRestore = vi.fn();
+    const onBackedUp = vi.fn();
     render(
       <ExportView
         tripName="London Aug 2026"
@@ -82,6 +87,8 @@ describe('ExportView', () => {
         accountExpected={noAccounts}
         onDownloadBackup={vi.fn()}
         onRestore={onRestore}
+        lastBackup={null}
+        onBackedUp={onBackedUp}
       />,
     );
 
@@ -101,11 +108,13 @@ describe('ExportView', () => {
     expect(screen.getByText(/London Aug 2026.*1 expenses/)).toBeInTheDocument();
     expect(screen.getByText(/Ramstein Sep 2026.*0 expenses/)).toBeInTheDocument();
     expect(onRestore).not.toHaveBeenCalled();
+    expect(onBackedUp).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /replace all data/i }));
     expect(onRestore).toHaveBeenCalledWith(
       expect.objectContaining({ trips }),
     );
+    await waitFor(() => expect(onBackedUp).toHaveBeenCalled());
   });
 
   it('shows an error and does not offer to restore an invalid file', async () => {
@@ -119,6 +128,8 @@ describe('ExportView', () => {
         accountExpected={noAccounts}
         onDownloadBackup={vi.fn()}
         onRestore={onRestore}
+        lastBackup={null}
+        onBackedUp={vi.fn()}
       />,
     );
 
@@ -138,8 +149,9 @@ describe('ExportView', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('downloads a backup by calling onDownloadBackup', async () => {
+  it('downloads a backup by calling onDownloadBackup, then reports it backed up', async () => {
     const onDownloadBackup = vi.fn().mockResolvedValue(buildBackup([tripBackup()]));
+    const onBackedUp = vi.fn();
     render(
       <ExportView
         tripName="London Aug 2026"
@@ -149,9 +161,44 @@ describe('ExportView', () => {
         accountExpected={noAccounts}
         onDownloadBackup={onDownloadBackup}
         onRestore={vi.fn()}
+        lastBackup={null}
+        onBackedUp={onBackedUp}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /download backup/i }));
     await waitFor(() => expect(onDownloadBackup).toHaveBeenCalled());
+    await waitFor(() => expect(onBackedUp).toHaveBeenCalled());
+  });
+
+  it('shows when the device was last backed up, or that it never was', () => {
+    const { rerender } = render(
+      <ExportView
+        tripName="London Aug 2026"
+        expenses={[exp()]}
+        segments={[]}
+        expected={{}}
+        accountExpected={noAccounts}
+        onDownloadBackup={vi.fn()}
+        onRestore={vi.fn()}
+        lastBackup={null}
+        onBackedUp={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/last backup: never/i)).toBeInTheDocument();
+
+    rerender(
+      <ExportView
+        tripName="London Aug 2026"
+        expenses={[exp()]}
+        segments={[]}
+        expected={{}}
+        accountExpected={noAccounts}
+        onDownloadBackup={vi.fn()}
+        onRestore={vi.fn()}
+        lastBackup={{ at: new Date(Date.now() - 2 * 86_400_000).toISOString(), expenseCount: 1 }}
+        onBackedUp={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/last backup: 2 days ago/i)).toBeInTheDocument();
   });
 });
