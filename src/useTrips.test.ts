@@ -190,7 +190,7 @@ describe('useTrips', () => {
             expenses: [],
             segments: [],
             dtsExpected: {},
-            dtsAccountExpected: { gtcc: null, personal: null },
+            dtsAccountExpected: { gtcc: null, personal: null, total: null },
           },
         ],
       });
