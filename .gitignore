@@ -16,6 +16,9 @@ coverage
 # Claude Code local (per-user) settings — shared .claude/settings.json is fine to commit
 .claude/settings.local.json
 
+# Local docs not meant for the repo
+DTS-Expense-Tracker-Pitch.docx
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
