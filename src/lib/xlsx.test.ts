@@ -35,8 +35,10 @@ function findRow(
   let found: (string | number | null)[] | undefined;
   ws.eachRow((row) => {
     if (row.getCell(1).value === firstCell) {
-      found = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
-        (i) => row.getCell(i).value as string | number | null,
+      // Widest sheet is Expenses (11 columns as of the Receipt # addition).
+      found = Array.from(
+        { length: 11 },
+        (_, i) => row.getCell(i + 1).value as string | number | null,
       );
     }
   });
@@ -175,10 +177,29 @@ describe('buildXlsx', () => {
     const wb = await readBack(buf);
 
     // Expenses sheet: date, category, gbp, usd, payment, usd_pending,
-    // entered, miles, rate, note -> indices 0-9
+    // entered, miles, rate, receipt_no, note -> indices 0-10
     const raw = findRow(wb, 'Expenses', '2026-07-01');
     expect(raw?.[7]).toBe(42); // Miles
     expect(raw?.[8]).toBe(0.67); // Rate
-    expect(raw?.[9]).toBe('leg 1'); // Note still lands correctly after the shift
+    expect(raw?.[9]).toBeNull(); // Receipt # — blank, this row has no photo
+    expect(raw?.[10]).toBe('leg 1'); // Note still lands correctly after the shift
+  });
+
+  it('numbers the Receipt # column only for rows with a photo', async () => {
+    const buf = await buildXlsx(
+      [
+        exp({ id: 'a', date: '2026-07-01', photoIds: ['p1'], note: 'first' }),
+        exp({ id: 'b', date: '2026-07-02', photoIds: [], note: 'none' }),
+        exp({ id: 'c', date: '2026-07-03', photoIds: ['p2'], note: 'second' }),
+      ],
+      [],
+    );
+    const wb = await readBack(buf);
+
+    expect(findRow(wb, 'Expenses', '2026-07-01')?.[9]).toBe(1);
+    expect(findRow(wb, 'Expenses', '2026-07-02')?.[9]).toBeNull();
+    // Numbering is sequential across photo-bearing rows, so it skips the gap
+    // rather than tracking the row index.
+    expect(findRow(wb, 'Expenses', '2026-07-03')?.[9]).toBe(2);
   });
 });

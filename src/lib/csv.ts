@@ -62,6 +62,7 @@ export function buildCsv(
       'entered_in_dts',
       'miles',
       'rate',
+      'receipt_no',
       'note',
     ]),
   );
@@ -77,6 +78,7 @@ export function buildCsv(
         e.entered ? 'yes' : '',
         raw(e.miles),
         raw(e.rate),
+        raw(e.receiptNo),
         e.note,
       ]),
     );

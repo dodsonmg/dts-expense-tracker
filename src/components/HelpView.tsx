@@ -77,8 +77,12 @@ const FAQS: { q: string; a: string | string[] }[] = [
     a: 'No — this is the one thing a backup doesn’t cover. The backup is a text file of your expenses, and photos would make it enormous, so they stay on this device only. If you restore onto a new phone you’ll get every expense back, but not the photos. Keep anything you can’t afford to lose in your normal photo library too.',
   },
   {
+    q: 'How do I get my receipts to the office for DTS?',
+    a: 'Use "Export & share receipts (.zip)" on the Export tab. The zip holds the same formatted .xlsx plus one image per receipt, named receipt-01.jpg, receipt-02.jpg and so on. Those numbers match the spreadsheet’s "Receipt #" column, so as you key each line into DTS you can attach the correspondingly numbered photo as evidence. The button only appears once at least one expense has a photo.',
+  },
+  {
     q: 'Does any of my data leave my phone?',
-    a: 'No accounts, no sync, no backend — everything lives on the device. The only things that ever leave are the files you choose to export and email yourself: the CSV/.xlsx or the backup file.',
+    a: 'No accounts, no sync, no backend — everything lives on the device. The only things that ever leave are the files you choose to export and email yourself: the CSV/.xlsx, the receipts .zip, or the backup file.',
   },
 ];
 

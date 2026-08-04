@@ -136,6 +136,7 @@ export default function App() {
             segments={trip.segments}
             expected={trip.dtsExpected}
             accountExpected={trip.dtsAccountExpected}
+            onLoadPhoto={trip.getPhoto}
             onDownloadBackup={async () => buildBackup(await trips.loadAllTripsData())}
             onRestore={handleRestore}
             lastBackup={backupNudge.lastBackup}

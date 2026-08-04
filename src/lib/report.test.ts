@@ -114,3 +114,46 @@ describe('buildReport', () => {
     expect(r.categories.find((c) => c.category === 'M&IE')!.usd).toBe(200);
   });
 });
+
+describe('buildReport — receiptNo', () => {
+  it('numbers photo-bearing rows sequentially, leaving others null', () => {
+    const report = buildReport(
+      [
+        exp({ id: 'a', photoIds: ['p1'] }),
+        exp({ id: 'b', photoIds: [] }),
+        exp({ id: 'c', photoIds: ['p2'] }),
+        exp({ id: 'd', photoIds: ['p3'] }),
+      ],
+      [],
+    );
+
+    expect(report.expenses.map((e) => e.receiptNo)).toEqual([1, null, 2, 3]);
+  });
+
+  it('follows input order, so numbers run down the exported sheet', () => {
+    const report = buildReport(
+      [
+        exp({ id: 'a', date: '2026-07-09', photoIds: ['p1'] }),
+        exp({ id: 'b', date: '2026-07-01', photoIds: ['p2'] }),
+      ],
+      [],
+    );
+
+    // Not re-sorted by date — the exporters render this same order.
+    expect(report.expenses.map((e) => [e.date, e.receiptNo])).toEqual([
+      ['2026-07-09', 1],
+      ['2026-07-01', 2],
+    ]);
+  });
+
+  it('leaves every receiptNo null when nothing has a photo', () => {
+    const report = buildReport([exp({ id: 'a' }), exp({ id: 'b' })], []);
+    expect(report.expenses.every((e) => e.receiptNo === null)).toBe(true);
+  });
+
+  it('is a 1:1 map over the input, so index-pairing with expenses is safe', () => {
+    // ExportView.makeZip relies on this to pair a photo blob with its number.
+    const expenses = [exp({ id: 'a', photoIds: ['p1'] }), exp({ id: 'b' })];
+    expect(buildReport(expenses, []).expenses).toHaveLength(expenses.length);
+  });
+});

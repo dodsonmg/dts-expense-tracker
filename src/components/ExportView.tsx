@@ -3,6 +3,8 @@ import type { DtsAccountExpected, DtsExpected, Expense, MieSegment } from '../ty
 import type { LastBackupInfo } from '../db';
 import { buildCsv, csvFilename } from '../lib/csv';
 import { buildXlsx, xlsxFilename, XLSX_MIME } from '../lib/xlsx';
+import { buildReport } from '../lib/report';
+import { buildReceiptZip, zipFilename, ZIP_MIME, type ReceiptPhoto } from '../lib/zip';
 import { backupFilename, BackupParseError, parseBackup, type Backup } from '../lib/backup';
 
 interface Props {
@@ -13,6 +15,7 @@ interface Props {
   accountExpected: DtsAccountExpected;
   onDownloadBackup: () => Promise<string>;
   onRestore: (backup: Backup) => void | Promise<void>;
+  onLoadPhoto: (photoId: string) => Promise<Blob | null>;
   lastBackup: LastBackupInfo | null;
   onBackedUp: () => void;
 }
@@ -35,6 +38,7 @@ export function ExportView({
   accountExpected,
   onDownloadBackup,
   onRestore,
+  onLoadPhoto,
   lastBackup,
   onBackedUp,
 }: Props) {
@@ -45,6 +49,7 @@ export function ExportView({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const empty = expenses.length === 0 && segments.length === 0;
+  const photoCount = expenses.filter((e) => e.photoIds.length > 0).length;
 
   async function shareBlob(blob: Blob, name: string, type: string) {
     const file = new File([blob], name, { type });
@@ -78,6 +83,30 @@ export function ExportView({
     return {
       blob: new Blob([buf], { type: XLSX_MIME }),
       name: xlsxFilename(tripName),
+    };
+  }
+
+  // The spreadsheet plus the photos it references. Both come from the same
+  // buildReport model, so the Receipt # column and receipt-NN.jpg always agree.
+  async function makeZip(): Promise<{ blob: Blob; name: string }> {
+    const buf = await buildXlsx(expenses, segments, expected, accountExpected);
+    const report = buildReport(expenses, segments, expected, accountExpected);
+
+    // report.expenses is a 1:1 map over `expenses`, so indexes line up.
+    const photos: ReceiptPhoto[] = [];
+    for (let i = 0; i < expenses.length; i++) {
+      const photoId = expenses[i].photoIds[0];
+      const receiptNo = report.expenses[i].receiptNo;
+      if (!photoId || receiptNo == null) continue;
+      const blob = await onLoadPhoto(photoId);
+      // A missing blob shouldn't sink the whole export — the sheet still has
+      // the row, it just won't have evidence attached.
+      if (blob) photos.push({ receiptNo, blob });
+    }
+
+    return {
+      blob: await buildReceiptZip(buf, xlsxFilename(tripName), photos),
+      name: zipFilename(tripName),
     };
   }
 
@@ -180,6 +209,31 @@ export function ExportView({
       >
         Download CSV
       </button>
+
+      {photoCount > 0 && (
+        <>
+          <button
+            type="button"
+            className="btn"
+            disabled={busy}
+            onClick={() =>
+              withBusy(async () => {
+                const { blob, name } = await makeZip();
+                await shareBlob(blob, name, ZIP_MIME);
+              })
+            }
+          >
+            ⇪ Export &amp; share receipts (.zip)
+          </button>
+          <p className="muted small">
+            The .xlsx plus {photoCount} receipt photo
+            {photoCount === 1 ? '' : 's'}, numbered to match the sheet&apos;s{' '}
+            <strong>Receipt #</strong> column — attach{' '}
+            <code>receipt-01.jpg</code> to the line numbered 1 as you key it
+            into DTS.
+          </p>
+        </>
+      )}
 
       {busy && <p className="muted small">Building spreadsheet…</p>}
       {empty && <p className="muted">Nothing to export yet.</p>}

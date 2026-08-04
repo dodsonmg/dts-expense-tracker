@@ -7,7 +7,7 @@ import type {
   MieSegment,
   Payment,
 } from '../types';
-import { isEntered, isUsdPending } from '../types';
+import { hasPhoto, isEntered, isUsdPending } from '../types';
 import { mieTotalUsd, segmentTotal } from './mie';
 import {
   totalsByCategory,
@@ -36,6 +36,12 @@ export interface ReportExpenseRow {
   note: string;
   miles: number | null; // MILEAGE calculator inputs; null for every other category
   rate: number | null;
+  // 1-based index into the receipts .zip, sequential across rows that have a
+  // photo; null when the row has none. Recomputed on every export rather than
+  // persisted — the zip always ships the spreadsheet and the images together,
+  // so a bundle is internally consistent even if the numbering shifts between
+  // exports.
+  receiptNo: number | null;
 }
 
 export interface ReportSegmentRow {
@@ -99,6 +105,10 @@ export function buildReport(
   const acctTotalRecon = reconcileAccountTotal(byAccount, accountExpected);
   const acctPending = usdPendingCountsByAccount(expenses);
 
+  // Numbering follows the expense order the exporters already render, so the
+  // receipt numbers run straight down the sheet being keyed into DTS.
+  let nextReceiptNo = 1;
+
   return {
     expenses: expenses.map((e) => ({
       date: e.date,
@@ -111,6 +121,7 @@ export function buildReport(
       note: e.note,
       miles: e.miles,
       rate: e.rate,
+      receiptNo: hasPhoto(e) ? nextReceiptNo++ : null,
     })),
     segments: segments.map((s) => ({
       location: s.location,
