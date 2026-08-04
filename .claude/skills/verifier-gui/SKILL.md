@@ -41,7 +41,17 @@ const BASE = 'http://localhost:5183/dts-expense-tracker/'; // match the dev serv
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 420, height: 900 } }); // iPhone-ish width; this is a mobile PWA
 await page.goto(BASE);
-await page.evaluate(() => localStorage.clear()); // fresh trip, no leftover IndexedDB/localForage state
+// The app's data lives in IndexedDB (localforage), NOT localStorage — clearing
+// localStorage leaves every trip, expense and receipt photo in place, so runs
+// silently accumulate state and you end up debugging a previous run's data.
+// Delete the database instead.
+await page.evaluate(
+  () =>
+    new Promise((resolve) => {
+      const r = indexedDB.deleteDatabase('dts-expense-tracker');
+      r.onsuccess = r.onerror = r.onblocked = () => resolve();
+    }),
+);
 await page.reload();
 ```
 
@@ -67,6 +77,23 @@ Key selectors (all accessible-name based; the tab bar's icon glyphs are
   the same way in `ExpenseList`'s `EditRow`. The List row shows a
   `"<miles> mi @ $<rate>/mi"` sub-line (e.g. `42.0 mi @ $0.670/mi`) only when
   the row has stored miles/rate — a manually-entered mileage row has none.
+- Receipt photos: the file inputs are `.visually-hidden`, so drive them with
+  `setInputFiles` directly rather than clicking the visible button —
+  `page.setInputFiles('#entry-photo', {...})` on Entry, and
+  `page.locator('input[type=file][id^="edit-"]')` inside `EditRow` (its id
+  folds in the expense id). Both carry `accept="image/*"` and deliberately no
+  `capture` attribute. After picking, wait for
+  `img[alt="Attached receipt"]` — that's the compressed thumbnail, and its
+  `naturalWidth`/`naturalHeight` is the cheapest proof `lib/photo.ts` actually
+  ran (a 3024×4032 source should come back 1200×1600). A list row with a photo
+  shows `page.locator('.row__photo')` /
+  `getByRole('button', { name: /View receipt photo/ })`; clicking it opens
+  `[role="dialog"]` (`.lightbox__img`), closed via
+  `getByRole('button', { name: 'Close receipt photo' })`. Note `EditRow` stages
+  photo changes like every other field — nothing is written until `Save`.
+  **This is the surface that most needs this skill**: jsdom has no `<canvas>`,
+  so compression is untestable in vitest and component tests mock
+  `lib/photo.ts` entirely.
 - Totals inputs: `getByLabel('DTS USD total for LODGING')`,
   `getByLabel('DTS USD reimbursement for GTCC')` (also `Personal`).
 - Recon row state: `page.$$eval('.recon__row', els => els.map(el =>
@@ -116,7 +143,7 @@ successful download or restore.
 A separate `BackupNudgeToast` (same `.update-toast` styling/mount point as
 `UpdateToast`, rendered just below it) nudges toward this card once
 `useBackupNudge`'s day/edit-count thresholds are both crossed — not
-reachable from a fresh `localStorage.clear()` bootstrap with few expenses,
+reachable from a fresh-database bootstrap with few expenses,
 so don't try to force it; confirm via code review or by seeding `db.ts`'s
 `lastBackup` key directly if it genuinely needs visual verification. Text:
 `text=/It's been \d+ days since your last backup/` or `text=/never backed
@@ -138,7 +165,7 @@ minimum). `getByRole('button', { name: '＋ New trip' })` reveals a text input
 + `Create`. Archived trips are hidden from the panel's default list, behind
 `getByRole('button', { name: /Show archived/ })` (label includes a count,
 e.g. `'Show archived (1)'`; flips to `'Hide archived'` when expanded). A
-fresh `localStorage.clear()` + reload (this skill's standard bootstrap) still
+fresh database + reload (this skill's standard bootstrap) still
 yields exactly one auto-created default trip (e.g. "Trip 1"), so existing
 single-trip verification flows don't need to change their assumptions about
 initial state.

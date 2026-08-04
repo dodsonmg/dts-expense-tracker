@@ -307,6 +307,10 @@ select:focus {
   padding: 1rem;
   font-size: 1.05rem;
 }
+.btn--small {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+}
 /* Inline mode-switch affordance (e.g. MILEAGE calculator <-> manual entry). */
 .link-btn {
   align-self: flex-start;
@@ -434,6 +438,63 @@ select:focus {
   border-radius: 6px;
   padding: 0.05rem 0.35rem;
   font-size: 0.68rem;
+}
+
+/* ---- Receipt photos ---- */
+/* Row badge: marks that a photo exists and opens it. Deliberately just an
+   indicator — the blob isn't fetched until it's tapped. */
+.row__photo {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  padding: 0.1rem 0.4rem;
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: rgba(93, 188, 210, 0.14);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.photo-thumb {
+  max-width: 100%;
+  max-height: 180px;
+  width: auto;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  object-fit: contain;
+  align-self: flex-start;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.lightbox__img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 9px;
+}
+
+.lightbox__close {
+  flex: 0 0 auto;
 }
 
 /* ---- M&IE segments ---- */

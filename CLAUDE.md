@@ -100,6 +100,13 @@ npm test           # vitest run
     trip's data.
   - `format.ts` — currency + date helpers, plus `slugify` (trip name → safe
     filename fragment, used by `csv.ts`/`xlsx.ts`'s filename generators).
+  - `photo.ts` — receipt-photo downscale/re-encode before storage
+    (`compressImage`, plus the pure `targetDimensions`). Uses
+    `createImageBitmap(..., { imageOrientation: 'from-image' })` so an
+    iPhone's EXIF rotation is applied rather than baked in sideways. Only
+    `targetDimensions` is unit-testable — jsdom has no `<canvas>`, so the
+    draw/encode path needs `verifier-gui` or a device; component tests
+    `vi.mock` this module rather than faking a canvas.
   - `pwaRegister.ts` — re-exports `useRegisterSW` from
     `virtual:pwa-register/react`. Exists purely so tests can `vi.mock` a real
     file path; the virtual specifier itself can't be resolved under
@@ -110,7 +117,10 @@ npm test           # vitest run
   props — the one screen that isn't fed by `useTripData()`), plus
   `TripSwitcher` (mounted in the header, not a tab — reachable from every
   screen; also the archive/unarchive control, with a "Show archived" toggle
-  for its default-hidden rows), `UpdateToast`, and `BackupNudgeToast`.
+  for its default-hidden rows), `UpdateToast`, `BackupNudgeToast`, plus
+  `PhotoField` (the receipt-photo picker shared by `EntryForm` and `EditRow` —
+  owns compression and the thumbnail; the caller owns where the blob goes) and
+  `PhotoLightbox` (full-screen view, opened from a list row's photo badge).
   `App.tsx` is the tab shell; it also mounts `UpdateToast` and
   `BackupNudgeToast` (see below).
 

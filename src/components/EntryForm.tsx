@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ITEMIZED_CATEGORIES,
   type Expense,
@@ -7,9 +7,13 @@ import {
 } from '../types';
 import { today, money, FOREIGN_SYMBOL } from '../lib/format';
 import { mileageAmountUsd } from '../lib/mileage';
+import { PhotoField } from './PhotoField';
 
 interface Props {
-  onAdd: (data: Omit<Expense, 'id'>) => void;
+  // Returns the new expense's id, so a photo picked before saving can be
+  // attached to the row the moment it exists.
+  onAdd: (data: Omit<Expense, 'id'>) => string;
+  onAttachPhoto: (expenseId: string, blob: Blob) => void;
   onDone: () => void;
 }
 
@@ -25,7 +29,7 @@ function parseAmount(raw: string): number | null {
 // Optimized for fast repeated entry: after saving, amounts and note clear but
 // date/category/payment persist for the next row. MILEAGE's rate also
 // persists (same rate usually applies to every leg of a trip); miles clears.
-export function EntryForm({ onAdd, onDone }: Props) {
+export function EntryForm({ onAdd, onAttachPhoto, onDone }: Props) {
   const [date, setDate] = useState(today);
   const [category, setCategory] = useState<ItemizedCategory>('LODGING');
   const [gbp, setGbp] = useState('');
@@ -35,6 +39,16 @@ export function EntryForm({ onAdd, onDone }: Props) {
   const [mileageManual, setMileageManual] = useState(false);
   const [payment, setPayment] = useState<Payment>('GTCC');
   const [note, setNote] = useState('');
+  // Held locally until save: the expense doesn't exist (and has no id) yet.
+  const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
+
+  // Object URLs leak until revoked. Keying the cleanup on `photo` covers every
+  // path at once: the previous URL is revoked when one replaces it, when it is
+  // cleared on save/remove, and when the form unmounts still holding one.
+  useEffect(() => {
+    if (!photo) return;
+    return () => URL.revokeObjectURL(photo.url);
+  }, [photo]);
 
   const isMileage = category === 'MILEAGE';
   const useCalculator = isMileage && !mileageManual;
@@ -51,7 +65,7 @@ export function EntryForm({ onAdd, onDone }: Props) {
 
   function save(thenDone: boolean) {
     if (!canSave) return;
-    onAdd({
+    const id = onAdd({
       date,
       category,
       amount_gbp: amountGbp,
@@ -61,12 +75,16 @@ export function EntryForm({ onAdd, onDone }: Props) {
       entered: false, // new expenses haven't been keyed into DTS yet
       miles: useCalculator ? milesNum : null,
       rate: useCalculator ? rateNum : null,
-      photoIds: [], // attached separately, after the row has an id
+      photoIds: [], // attached below, now that the row has an id
     });
+    if (photo) onAttachPhoto(id, photo.blob);
     setGbp('');
     setUsd('');
     setMiles('');
     setNote('');
+    // Photo is per-expense, so it clears like the amounts — unlike
+    // date/category/payment, which persist for the next row.
+    setPhoto(null);
     if (thenDone) onDone();
   }
 
@@ -208,6 +226,15 @@ export function EntryForm({ onAdd, onDone }: Props) {
           placeholder="optional"
         />
       </label>
+
+      <PhotoField
+        idPrefix="entry"
+        previewUrl={photo?.url ?? null}
+        onSelect={(blob) =>
+          setPhoto({ blob, url: URL.createObjectURL(blob) })
+        }
+        onRemove={() => setPhoto(null)}
+      />
 
       <div className="form__actions">
         <button
