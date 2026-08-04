@@ -7,6 +7,13 @@ import { FOREIGN_SYMBOL } from '../lib/format';
 
 const foreignLabelExact = new RegExp(`^${FOREIGN_SYMBOL}$`);
 
+// The photo props most tests don't exercise. Tests that do override them.
+const photoProps = {
+  onAttachPhoto: vi.fn(),
+  onRemovePhoto: vi.fn(),
+  onLoadPhoto: vi.fn().mockResolvedValue(null),
+};
+
 const exp = (over: Partial<Expense> = {}): Expense => ({
   id: 'e',
   date: '2026-07-01',
@@ -28,6 +35,7 @@ describe('ExpenseList — entered-in-DTS', () => {
     const onUpdate = vi.fn();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[exp({ id: 'a', entered: false })]}
         onUpdate={onUpdate}
         onDelete={vi.fn()}
@@ -45,6 +53,7 @@ describe('ExpenseList — entered-in-DTS', () => {
     const onUpdate = vi.fn();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[exp({ id: 'a', entered: true })]}
         onUpdate={onUpdate}
         onDelete={vi.fn()}
@@ -59,6 +68,7 @@ describe('ExpenseList — entered-in-DTS', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[exp({ id: 'a' })]}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
@@ -75,6 +85,7 @@ describe('ExpenseList — entered-in-DTS', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[exp({ id: 'a', category: 'LODGING' })]}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
@@ -89,6 +100,7 @@ describe('ExpenseList — entered-in-DTS', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           exp({ id: 'a', category: 'LODGING', entered: true }),
           exp({ id: 'b', category: 'TRANSPORT', entered: false }),
@@ -110,6 +122,7 @@ describe('ExpenseList — entered-in-DTS', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           // pending + not entered  -> survives both filters
           exp({ id: 'a', note: 'aaa', amount_gbp: 5, amount_usd: null, entered: false }),
@@ -140,6 +153,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
   it('shows a miles/rate sub-line on a MILEAGE row', () => {
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           exp({
             id: 'a',
@@ -161,6 +175,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
   it('does not show a mileage sub-line on a non-MILEAGE row', () => {
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[exp({ id: 'a', category: 'LODGING' })]}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
@@ -175,6 +190,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     const onUpdate = vi.fn();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           exp({
             id: 'a',
@@ -208,6 +224,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[exp({ id: 'a', category: 'LODGING' })]}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
@@ -224,6 +241,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           exp({ id: 'a', category: 'LODGING' }),
           exp({ id: 'b', category: 'TRANSPORT' }),
@@ -245,6 +263,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           exp({ id: 'a', category: 'MILEAGE', amount_usd: 50, miles: null, rate: null }),
         ]}
@@ -266,6 +285,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     const onUpdate = vi.fn();
     render(
       <ExpenseList
+        {...photoProps}
         expenses={[
           exp({
             id: 'a',
@@ -296,5 +316,158 @@ describe('ExpenseList — MILEAGE calculator', () => {
       'a',
       expect.objectContaining({ amount_usd: 99, miles: null, rate: null }),
     );
+  });
+});
+
+vi.mock('../lib/photo', () => ({
+  compressImage: vi.fn(async (blob: Blob) => blob),
+}));
+
+describe('ExpenseList — receipt photos', () => {
+  const pickFile = () =>
+    new File(['receipt bytes'], 'receipt.jpg', { type: 'image/jpeg' });
+
+  it('shows a view-photo badge only on rows that have one', () => {
+    render(
+      <ExpenseList
+        {...photoProps}
+        expenses={[
+          exp({ id: 'a', category: 'LODGING', photoIds: ['p1'] }),
+          exp({ id: 'b', category: 'TRANSPORT', photoIds: [] }),
+        ]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /view receipt photo for LODGING/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /view receipt photo for TRANSPORT/i }),
+    ).toBeNull();
+  });
+
+  it('opens the photo in a lightbox, fetching the blob only on tap', async () => {
+    const user = userEvent.setup();
+    const onLoadPhoto = vi
+      .fn()
+      .mockResolvedValue(new Blob(['bytes'], { type: 'image/jpeg' }));
+    render(
+      <ExpenseList
+        {...photoProps}
+        onLoadPhoto={onLoadPhoto}
+        expenses={[exp({ id: 'a', photoIds: ['p1'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    // Rendering the list must not decode any photo.
+    expect(onLoadPhoto).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /view receipt photo/i }));
+
+    expect(onLoadPhoto).toHaveBeenCalledWith('p1');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /close receipt photo/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('tapping the photo badge does not open the row editor', async () => {
+    const user = userEvent.setup();
+    const onLoadPhoto = vi
+      .fn()
+      .mockResolvedValue(new Blob(['bytes'], { type: 'image/jpeg' }));
+    render(
+      <ExpenseList
+        {...photoProps}
+        onLoadPhoto={onLoadPhoto}
+        expenses={[exp({ id: 'a', photoIds: ['p1'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /view receipt photo/i }));
+
+    expect(screen.queryByRole('button', { name: /^save$/i })).toBeNull();
+  });
+
+  it('EditRow attaches a photo on Save, not on pick', async () => {
+    const user = userEvent.setup();
+    const onAttachPhoto = vi.fn();
+    render(
+      <ExpenseList
+        {...photoProps}
+        onAttachPhoto={onAttachPhoto}
+        expenses={[exp({ id: 'a' })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('LODGING'));
+    await user.upload(screen.getByTestId('edit-a-photo-input'), pickFile());
+    await screen.findByAltText('Attached receipt');
+
+    // Staged like every other field in the row — nothing committed yet.
+    expect(onAttachPhoto).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob));
+  });
+
+  it('EditRow discards a staged photo on Cancel', async () => {
+    const user = userEvent.setup();
+    const onAttachPhoto = vi.fn();
+    render(
+      <ExpenseList
+        {...photoProps}
+        onAttachPhoto={onAttachPhoto}
+        expenses={[exp({ id: 'a' })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('LODGING'));
+    await user.upload(screen.getByTestId('edit-a-photo-input'), pickFile());
+    await screen.findByAltText('Attached receipt');
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(onAttachPhoto).not.toHaveBeenCalled();
+  });
+
+  it('EditRow removes an existing photo on Save', async () => {
+    const user = userEvent.setup();
+    const onRemovePhoto = vi.fn();
+    const onLoadPhoto = vi
+      .fn()
+      .mockResolvedValue(new Blob(['bytes'], { type: 'image/jpeg' }));
+    render(
+      <ExpenseList
+        {...photoProps}
+        onRemovePhoto={onRemovePhoto}
+        onLoadPhoto={onLoadPhoto}
+        expenses={[exp({ id: 'a', photoIds: ['p1'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('LODGING'));
+    // The open row eagerly previews its existing photo (only one row is open
+    // at a time, unlike the collapsed rows' badge-only treatment).
+    await screen.findByAltText('Attached receipt');
+    expect(onLoadPhoto).toHaveBeenCalledWith('p1');
+
+    await user.click(screen.getByRole('button', { name: /remove photo/i }));
+    expect(screen.queryByAltText('Attached receipt')).toBeNull();
+    expect(onRemovePhoto).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(onRemovePhoto).toHaveBeenCalledWith('a');
   });
 });
