@@ -69,8 +69,16 @@ const FAQS: { q: string; a: string | string[] }[] = [
     a: 'A formatted .xlsx (mismatch rows red, USD-incomplete rows yellow, reconciliation tables up top) and a plain CSV with the same numbers as a fallback. Both are meant to work as a standalone spreadsheet at the office, where phones aren’t allowed.',
   },
   {
+    q: 'Can I attach a photo of a receipt?',
+    a: 'Yes — one photo per expense, either as you add it on Entry or later by tapping the expense on List. Photos are shrunk before they’re saved so a trip’s worth of receipts doesn’t fill up your phone. Rows that have one show a small marker on List; tap it to view the photo full-screen.',
+  },
+  {
+    q: 'Are receipt photos included in the backup file?',
+    a: 'No — this is the one thing a backup doesn’t cover. The backup is a text file of your expenses, and photos would make it enormous, so they stay on this device only. If you restore onto a new phone you’ll get every expense back, but not the photos. Keep anything you can’t afford to lose in your normal photo library too.',
+  },
+  {
     q: 'Does any of my data leave my phone?',
-    a: 'No accounts, no sync, no backend — everything lives on the device. The only thing that ever leaves is the CSV/.xlsx you choose to export and email yourself.',
+    a: 'No accounts, no sync, no backend — everything lives on the device. The only things that ever leave are the files you choose to export and email yourself: the CSV/.xlsx or the backup file.',
   },
 ];
 

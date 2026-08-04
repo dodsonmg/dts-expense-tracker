@@ -99,12 +99,19 @@ export default function App() {
         {!ready ? (
           <p className="muted">Loading…</p>
         ) : tab === 'entry' ? (
-          <EntryForm onAdd={trip.addExpense} onDone={() => setTab('list')} />
+          <EntryForm
+            onAdd={trip.addExpense}
+            onAttachPhoto={trip.attachPhoto}
+            onDone={() => setTab('list')}
+          />
         ) : tab === 'list' ? (
           <ExpenseList
             expenses={trip.expenses}
             onUpdate={trip.updateExpense}
             onDelete={trip.deleteExpense}
+            onAttachPhoto={trip.attachPhoto}
+            onRemovePhoto={trip.removePhoto}
+            onLoadPhoto={trip.getPhoto}
           />
         ) : tab === 'mie' ? (
           <MieView

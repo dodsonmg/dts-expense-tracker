@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  hasPhoto,
   ITEMIZED_CATEGORIES,
   isEntered,
   isUsdPending,
@@ -9,11 +10,16 @@ import {
 } from '../types';
 import { money, FOREIGN_SYMBOL } from '../lib/format';
 import { describeMileage, mileageAmountUsd } from '../lib/mileage';
+import { PhotoField } from './PhotoField';
+import { PhotoLightbox } from './PhotoLightbox';
 
 interface Props {
   expenses: Expense[];
   onUpdate: (id: string, patch: Partial<Expense>) => void;
   onDelete: (id: string) => void;
+  onAttachPhoto: (expenseId: string, blob: Blob) => void;
+  onRemovePhoto: (expenseId: string) => void;
+  onLoadPhoto: (photoId: string) => Promise<Blob | null>;
 }
 
 function parseAmount(raw: string): number | null {
@@ -23,10 +29,32 @@ function parseAmount(raw: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
+export function ExpenseList({
+  expenses,
+  onUpdate,
+  onDelete,
+  onAttachPhoto,
+  onRemovePhoto,
+  onLoadPhoto,
+}: Props) {
   const [pendingOnly, setPendingOnly] = useState(false);
   const [outstandingOnly, setOutstandingOnly] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
+
+  // Fetched only when a photo badge is tapped — rendering the list itself must
+  // never decode every attached photo.
+  async function openPhoto(photoId: string) {
+    const blob = await onLoadPhoto(photoId);
+    if (blob) setViewing(URL.createObjectURL(blob));
+  }
+
+  function closePhoto() {
+    setViewing((url) => {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    });
+  }
 
   const sorted = useMemo(
     () =>
@@ -89,6 +117,9 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
                   onDelete(e.id);
                   setEditing(null);
                 }}
+                onAttachPhoto={(blob) => onAttachPhoto(e.id, blob)}
+                onRemovePhoto={() => onRemovePhoto(e.id)}
+                onLoadPhoto={onLoadPhoto}
               />
             ) : (
               <li
@@ -120,6 +151,20 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
                   <div className="row__main">
                     <span className="row__cat">{e.category}</span>
                     {e.note && <span className="row__note">{e.note}</span>}
+                    {hasPhoto(e) && (
+                      <button
+                        type="button"
+                        className="row__photo"
+                        aria-label={`View receipt photo for ${e.category}`}
+                        // The row body opens the editor; the badge must not.
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          void openPhoto(e.photoIds[0]);
+                        }}
+                      >
+                        <span aria-hidden>▣ Photo</span>
+                      </button>
+                    )}
                   </div>
                   <div className="row__meta">
                     <span className="row__amounts">
@@ -145,6 +190,8 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
           )}
         </ul>
       )}
+
+      {viewing && <PhotoLightbox url={viewing} onClose={closePhoto} />}
     </div>
   );
 }
@@ -154,9 +201,20 @@ interface EditProps {
   onSave: (patch: Partial<Expense>) => void;
   onCancel: () => void;
   onDelete: () => void;
+  onAttachPhoto: (blob: Blob) => void;
+  onRemovePhoto: () => void;
+  onLoadPhoto: (photoId: string) => Promise<Blob | null>;
 }
 
-function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
+function EditRow({
+  expense,
+  onSave,
+  onCancel,
+  onDelete,
+  onAttachPhoto,
+  onRemovePhoto,
+  onLoadPhoto,
+}: EditProps) {
   const [date, setDate] = useState(expense.date);
   const [category, setCategory] = useState<ItemizedCategory>(expense.category);
   const [gbp, setGbp] = useState(expense.amount_gbp?.toString() ?? '');
@@ -171,6 +229,46 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
   const [payment, setPayment] = useState<Payment>(expense.payment);
   const [note, setNote] = useState(expense.note);
   const [entered, setEntered] = useState(isEntered(expense));
+
+  // Photo edits stage like every other field in this row — they commit on Save
+  // and are discarded on Cancel. `undefined` = untouched, `null` = remove the
+  // existing photo, a blob = attach or replace.
+  const [pendingPhoto, setPendingPhoto] = useState<
+    { blob: Blob; url: string } | null | undefined
+  >(undefined);
+  const [existingUrl, setExistingUrl] = useState<string | null>(null);
+  const photoId = expense.photoIds[0] as string | undefined;
+
+  // Only one row is open for editing at a time, so eagerly loading its photo
+  // is cheap — unlike the collapsed rows, which just show a badge.
+  useEffect(() => {
+    if (!photoId) return;
+    let url: string | null = null;
+    let alive = true;
+    void onLoadPhoto(photoId).then((blob) => {
+      if (!alive || !blob) return;
+      url = URL.createObjectURL(blob);
+      setExistingUrl(url);
+    });
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [photoId, onLoadPhoto]);
+
+  useEffect(() => {
+    if (!pendingPhoto) return;
+    return () => URL.revokeObjectURL(pendingPhoto.url);
+  }, [pendingPhoto]);
+
+  const previewUrl =
+    pendingPhoto === undefined ? existingUrl : (pendingPhoto?.url ?? null);
+
+  function commitPhoto() {
+    if (pendingPhoto === undefined) return;
+    if (pendingPhoto === null) onRemovePhoto();
+    else onAttachPhoto(pendingPhoto.blob);
+  }
 
   const isMileage = category === 'MILEAGE';
   const useCalculator = isMileage && !mileageManual;
@@ -311,11 +409,22 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
         />
         <span>Entered in DTS</span>
       </label>
+
+      <PhotoField
+        idPrefix={`edit-${expense.id}`}
+        previewUrl={previewUrl}
+        onSelect={(blob) =>
+          setPendingPhoto({ blob, url: URL.createObjectURL(blob) })
+        }
+        onRemove={() => setPendingPhoto(null)}
+      />
+
       <div className="form__actions">
         <button
           type="button"
           className="btn btn--primary"
-          onClick={() =>
+          onClick={() => {
+            commitPhoto();
             onSave({
               date,
               category,
@@ -326,8 +435,8 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
               entered,
               miles: useCalculator ? milesNum : null,
               rate: useCalculator ? rateNum : null,
-            })
-          }
+            });
+          }}
         >
           Save
         </button>
