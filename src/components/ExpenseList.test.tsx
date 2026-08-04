@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExpenseList } from './ExpenseList';
 import type { Expense } from '../types';
+import { FOREIGN_SYMBOL } from '../lib/format';
+
+const foreignLabelExact = new RegExp(`^${FOREIGN_SYMBOL}$`);
 
 const exp = (over: Partial<Expense> = {}): Expense => ({
   id: 'e',
@@ -185,7 +188,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     );
 
     await user.click(screen.getByText('MILEAGE'));
-    expect(screen.queryByLabelText(/^GBP$/i)).toBeNull();
+    expect(screen.queryByLabelText(foreignLabelExact)).toBeNull();
 
     const miles = screen.getByLabelText('Miles') as HTMLInputElement;
     await user.clear(miles);
@@ -198,7 +201,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     );
   });
 
-  it('EditRow shows the plain GBP/USD fields for a non-MILEAGE row', async () => {
+  it('EditRow shows the plain foreign-currency/USD fields for a non-MILEAGE row', async () => {
     const user = userEvent.setup();
     render(
       <ExpenseList
@@ -209,7 +212,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     );
 
     await user.click(screen.getByText('LODGING'));
-    expect(screen.getByLabelText(/^GBP$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(foreignLabelExact)).toBeInTheDocument();
     expect(screen.getByLabelText(/^USD$/i)).toBeInTheDocument();
     expect(screen.queryByLabelText('Miles')).toBeNull();
   });
@@ -248,7 +251,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
     );
 
     await user.click(screen.getByText('MILEAGE'));
-    expect(screen.getByLabelText(/^GBP$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(foreignLabelExact)).toBeInTheDocument();
     expect(screen.queryByLabelText('Miles')).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Use miles × rate calculator instead' }),

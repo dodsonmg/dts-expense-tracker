@@ -28,16 +28,20 @@ GTCC-vs-personal split.
 Each itemized expense carries **two amount fields, both optional**:
 
 - `amount_gbp` — entered at time of purchase; matches the uploaded receipt.
+  Named for the field's original UK-only assumption, but not UK-specific: it
+  holds whatever foreign currency is on the receipt (pounds, euros, yen,
+  ...) and is shown in the UI as the generic `£€¥` symbol combo, not the
+  word "GBP" — see `FOREIGN_SYMBOL` in `src/lib/format.ts`.
 - `amount_usd` — backfilled later when the charge lands on the credit card;
   matches what is typed into DTS.
 
-No automatic conversion. Seeing GBP and USD side by side lets the user match a
-GBP receipt to a USD DTS entry. An expense with a GBP amount but no USD amount is
-**"USD pending"** (still outstanding on the card statement) and must be surfaced as
-a filter/flag.
+No automatic conversion. Seeing the foreign amount and USD side by side lets
+the user match a foreign-currency receipt to a USD DTS entry. An expense with
+a foreign amount but no USD amount is **"USD pending"** (still outstanding on
+the card statement) and must be surfaced as a filter/flag.
 
-Totals **never mix currencies**: every totals table shows separate GBP and USD
-columns/blocks that are never summed together.
+Totals **never mix currencies**: every totals table shows separate
+foreign-currency and USD columns/blocks that are never summed together.
 
 ## Categories (fixed set, fixed order)
 

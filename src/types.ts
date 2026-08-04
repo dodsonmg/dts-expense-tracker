@@ -86,8 +86,8 @@ export interface MieSegment {
   partial_days: number;
 }
 
-// An expense with a GBP amount but no USD amount is "USD pending":
-// still outstanding on the card statement.
+// An expense with a foreign-currency amount but no USD amount is "USD
+// pending": still outstanding on the card statement.
 export function isUsdPending(e: Expense): boolean {
   return e.amount_gbp != null && e.amount_usd == null;
 }

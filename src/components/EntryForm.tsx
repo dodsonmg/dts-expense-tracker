@@ -5,7 +5,7 @@ import {
   type ItemizedCategory,
   type Payment,
 } from '../types';
-import { today, money } from '../lib/format';
+import { today, money, FOREIGN_SYMBOL } from '../lib/format';
 import { mileageAmountUsd } from '../lib/mileage';
 
 interface Props {
@@ -156,7 +156,7 @@ export function EntryForm({ onAdd, onDone }: Props) {
       ) : (
         <div className="field-row">
           <label className="field">
-            <span>GBP (receipt)</span>
+            <span>{FOREIGN_SYMBOL} (receipt)</span>
             <input
               type="number"
               inputMode="decimal"
@@ -226,7 +226,9 @@ export function EntryForm({ onAdd, onDone }: Props) {
         </button>
       </div>
       {!canSave && !useCalculator && (
-        <p className="muted small">Enter a GBP or USD amount to save.</p>
+        <p className="muted small">
+          Enter a {FOREIGN_SYMBOL} or USD amount to save.
+        </p>
       )}
     </form>
   );

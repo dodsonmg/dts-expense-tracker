@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { slugify } from './format';
+import { money, slugify, FOREIGN_SYMBOL } from './format';
+
+describe('money', () => {
+  it('formats USD with a dollar sign', () => {
+    expect(money(12.3, 'USD')).toBe('$12.30');
+  });
+
+  it('formats GBP with the foreign-currency symbol combo, not a dollar sign', () => {
+    expect(money(12.3, 'GBP')).toBe(`${FOREIGN_SYMBOL}12.30`);
+    expect(money(1234.5, 'GBP')).toBe(`${FOREIGN_SYMBOL}1,234.50`);
+  });
+
+  it('renders null as an em dash regardless of currency', () => {
+    expect(money(null, 'USD')).toBe('—');
+    expect(money(null, 'GBP')).toBe('—');
+  });
+});
 
 describe('slugify', () => {
   it('lowercases and dashes a normal name', () => {

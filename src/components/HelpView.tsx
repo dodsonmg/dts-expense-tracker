@@ -5,13 +5,15 @@
 // that file is the source of truth for how the app actually behaves; this is
 // just a friendlier restatement of it. There's no automated check for drift,
 // so re-read it when either changes.
+import { FOREIGN_SYMBOL } from '../lib/format';
+
 const FAQS: { q: string; a: string | string[] }[] = [
   {
     q: 'What’s the expected workflow?',
     a: [
       'Start (or switch to) a trip using the switcher in the header.',
       'Capture expenses as they happen on Entry, including MILEAGE — it’s an itemized expense like any other, just defaulting to a miles × rate calculator instead of a typed amount.',
-      'For UK trips: record the GBP amount from the receipt right away, then backfill the USD amount on List once the charge actually lands on the card.',
+      `For trips abroad: record the ${FOREIGN_SYMBOL} amount from the receipt right away, then backfill the USD amount on List once the charge actually lands on the card.`,
       'Log M&IE per-diem segments on their own tab.',
       'As charges land on your card / in DTS, check expenses off on List.',
       'At the end of the trip, read DTS’s own totals and enter them on Totals to reconcile.',
@@ -31,12 +33,16 @@ const FAQS: { q: string; a: string | string[] }[] = [
     a: 'A gentle nudge, not a requirement — it only shows up once it’s been a while and you’ve made a meaningful number of changes since your last backup or restore. Dismissing it just hides it for this visit; it comes back next time you open the app if you’re still overdue. Tap "Back up now" to jump straight to the Export tab’s backup panel.',
   },
   {
-    q: 'Why aren’t GBP and USD ever added together?',
-    a: 'They’re different things: GBP is what the receipt says at the time of purchase, USD is what actually lands on the card (or what DTS reimburses). No conversion happens anywhere in the app — totals always keep the two currencies in separate columns.',
+    q: `What does "${FOREIGN_SYMBOL}" mean?`,
+    a: `Shorthand for "whatever foreign currency is on your receipt" — pounds, euros, yen, or anything else. The app doesn’t track which currency it is, just the amount your receipt shows before it’s reimbursed in USD.`,
+  },
+  {
+    q: `Why aren’t ${FOREIGN_SYMBOL} and USD ever added together?`,
+    a: `They’re different things: ${FOREIGN_SYMBOL} is what the receipt says, in the local currency, at the time of purchase; USD is what actually lands on the card (or what DTS reimburses). No conversion happens anywhere in the app — totals always keep the two currencies in separate columns.`,
   },
   {
     q: 'What does "USD pending" mean?',
-    a: 'An expense has a GBP amount but no USD amount yet — the charge hasn’t landed on the card statement. Filter for these on the List tab; the CSV/xlsx export flags them too.',
+    a: `An expense has a ${FOREIGN_SYMBOL} amount but no USD amount yet — the charge hasn’t landed on the card statement. Filter for these on the List tab; the CSV/xlsx export flags them too.`,
   },
   {
     q: 'What’s the difference between "USD incomplete" and "mismatch"?',

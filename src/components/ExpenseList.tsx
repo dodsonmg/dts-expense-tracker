@@ -7,7 +7,7 @@ import {
   type ItemizedCategory,
   type Payment,
 } from '../types';
-import { money } from '../lib/format';
+import { money, FOREIGN_SYMBOL } from '../lib/format';
 import { describeMileage, mileageAmountUsd } from '../lib/mileage';
 
 interface Props {
@@ -257,7 +257,7 @@ function EditRow({ expense, onSave, onCancel, onDelete }: EditProps) {
       ) : (
         <div className="field-row">
           <label className="field">
-            <span>GBP</span>
+            <span>{FOREIGN_SYMBOL}</span>
             <input
               type="number"
               inputMode="decimal"

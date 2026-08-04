@@ -11,7 +11,7 @@ import {
   type ReportTotalRow,
 } from './report';
 import type { MatchStatus, Reconcile } from './reconcile';
-import { slugify } from './format';
+import { slugify, FOREIGN_SYMBOL } from './format';
 
 export const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -72,7 +72,7 @@ export async function buildXlsx(
 
     const header = rec.addRow([
       firstCol,
-      'GBP',
+      FOREIGN_SYMBOL,
       'USD',
       'DTS USD',
       'Δ USD',
@@ -121,7 +121,7 @@ export async function buildXlsx(
   exp.columns = [
     { header: 'Date', width: 12 },
     { header: 'Category', width: 14 },
-    { header: 'GBP', width: 10 },
+    { header: FOREIGN_SYMBOL, width: 10 },
     { header: 'USD', width: 10 },
     { header: 'Payment', width: 10 },
     { header: 'USD pending', width: 12 },

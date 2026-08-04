@@ -100,9 +100,16 @@ npm test           # vitest run
 
 ## Domain invariants — get these wrong and the tool is misleading
 
-1. **Currencies are never summed together.** GBP and USD stay separate; there is
-   no conversion. The CSV export keeps both; the in-app Totals screen is a
-   USD-only reconciliation view (since DTS is USD).
+Note on naming: "GBP" below refers to the internal field/type (`amount_gbp`,
+`Currency = 'GBP' | 'USD'`) — the model still only distinguishes one non-USD
+currency from USD, it's just not assumed to be pounds. The UI never shows the
+literal word "GBP"; it displays that field via `FOREIGN_SYMBOL` (`£€¥`,
+`lib/format.ts`) so travelers to non-UK destinations aren't misled into
+thinking the field is pounds-only. See `HelpView`'s "What does £€¥ mean?" FAQ.
+
+1. **Currencies are never summed together.** GBP (displayed as `£€¥`) and USD
+   stay separate; there is no conversion. The CSV export keeps both; the
+   in-app Totals screen is a USD-only reconciliation view (since DTS is USD).
 2. **M&IE is computed, USD only, and always Personal.** It comes from the
    per-diem calculator (`mieTotalUsd`), never from itemized rows. It feeds the
    `M&IE` category row (USD) and the Personal account bucket (USD) — never GTCC,
