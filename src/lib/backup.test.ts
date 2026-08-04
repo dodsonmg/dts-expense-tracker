@@ -18,6 +18,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: true,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 
@@ -51,6 +52,19 @@ describe('buildBackup / parseBackup (v2, multi-trip)', () => {
     expect(parsed.version).toBe(2);
     expect(parsed.trips).toEqual(trips);
     expect(parsed.exportedAt).not.toBe('');
+  });
+
+  it('zeroes photoIds on parse — a backup can never carry photo references', () => {
+    // A hand-edited or future-version file might contain them; the blobs
+    // themselves are device-local and never in the file, so any id here would
+    // be a dangling reference on the restoring device.
+    const json = JSON.stringify({
+      version: 2,
+      exportedAt: '2026-08-01T00:00:00.000Z',
+      trips: [{ ...tripBackup(), expenses: [exp({ photoIds: ['p1', 'p2'] })] }],
+    });
+
+    expect(parseBackup(json).trips[0].expenses[0].photoIds).toEqual([]);
   });
 
   it('round-trips a trip\'s archived status', () => {

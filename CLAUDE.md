@@ -29,9 +29,10 @@ npm test           # vitest run
 ## Architecture
 
 - `src/types.ts` — domain types + the fixed `CATEGORIES` list/order, plus
-  `isUsdPending`. Also `Trip` (id/name/createdAt/`archived`) and `TripBackup`
-  (a `Trip` plus its full data — the unit whole-device backup and bulk
-  restore operate on). Single source of truth for the data model.
+  `isUsdPending`, `isEntered`, `hasPhoto`. Also `Trip`
+  (id/name/createdAt/`archived`) and `TripBackup` (a `Trip` plus its full
+  data — the unit whole-device backup and bulk restore operate on). Single
+  source of truth for the data model.
 - `src/db.ts` — IndexedDB load/save, one localforage instance. Per-trip data
   (expenses/segments/DTS totals) lives under `trip:<id>:<field>`-prefixed
   keys, not one instance per trip (no registry to enumerate those). Also owns
@@ -42,6 +43,15 @@ npm test           # vitest run
   keys are never deleted (cheap safety net) and never read again afterward.
   Also owns the `lastBackup` key (`LastBackupInfo`: `{ at, expenseCount }`),
   the baseline the backup nudge compares against — additive, no migration.
+  Receipt photos get one key each (`trip:<id>:photo:<photoId>`) via
+  `savePhoto`/`loadPhoto`/`deletePhoto` — the only variable-count keys, so
+  `deleteTripStorage` sweeps them with a `store.keys()` prefix scan rather
+  than naming them. Callers pass and receive `Blob`s, but the stored value is
+  `{ type, bytes: ArrayBuffer }`: `ArrayBuffer` is a structured-clone
+  primitive every implementation handles, whereas Blob-in-IndexedDB is
+  patchier (iOS Safari historically dropped them — localforage ships a
+  workaround) and `fake-indexeddb` clones a Blob to `{}`, which would leave
+  this path untestable.
 - `src/useTrips.ts` — owns the trip list, active trip id, and
   create/rename/delete/select/`setArchived`. A device always has ≥1 trip —
   `deleteTrip` is a no-op if it's the last one, regardless of archived
@@ -51,7 +61,13 @@ npm test           # vitest run
   Reloads when `tripId` changes (switching trips) or `reloadEpoch` changes (a
   restore preserves trip ids, so `activeTripId` may not change — the epoch
   forces a re-fetch anyway). `App` composes both hooks and passes slices
-  down; components are otherwise presentational.
+  down; components are otherwise presentational. `addExpense` **returns the
+  new id** so a caller can attach a photo to a row it just created (see
+  invariant 13). `attachPhoto`/`removePhoto`/`getPhoto` own the photo-blob
+  side effects, and `deleteExpense` sweeps the deleted row's blobs. That IO
+  deliberately sits *outside* the `setExpenses` updater — React re-invokes
+  updaters in Strict Mode to catch impurity, which would double-fire the
+  writes.
 - `src/useAllTripsData.ts` — read-only, cross-trip counterpart to
   `useTripData`: loads every given trip's expenses (keyed by trip id), used
   only for the backup nudge's edit count. Never persists. `App` patches in
@@ -182,6 +198,24 @@ thinking the field is pounds-only. See `HelpView`'s "What does £€¥ mean?" FA
     `useTrips.restoreFromBackup` both carry it through explicitly rather than
     dropping it, since both reconstruct `Trip` objects field-by-field instead
     of trusting the parsed JSON shape.
+13. **Receipt photos are device-local and never in a backup** — the one
+    per-trip field invariant 10's "restore replaces everything" promise does
+    *not* cover. `Expense.photoIds` holds ids; the bytes live under their own
+    `trip:<id>:photo:<photoId>` keys (`db.ts`), never inline in the expenses
+    array, so editing any other field doesn't re-serialize photo data (
+    `saveExpenses` writes the whole array at once) and vice versa. Backups
+    strip them at **both** ends: `useTrips.loadAllTripsData` zeroes `photoIds`
+    on the way out, `lib/backup.ts`'s `parseBackup` zeroes them again on the
+    way in — so a restored id can never dangle against a blob that only ever
+    existed on another device. Blobs are swept when their expense is deleted
+    (`useTripData.deleteExpense`), when replaced (`attachPhoto`), and when the
+    whole trip is deleted (`deleteTripStorage`'s prefix scan). Read "does this
+    row have one" via `hasPhoto` (defensive against legacy rows, like
+    `isEntered`). **One photo per expense today, but that cap is UI/behavior
+    only** — `photoIds` is a list and each photo already has its own key, so
+    going multi needs no model or storage migration; the two places that
+    enforce the cap are `attachPhoto` (replaces rather than appends) and the
+    zip export's 1:1 row-to-file numbering.
 
 ## Export contract
 

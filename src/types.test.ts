@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CATEGORIES,
   ITEMIZED_CATEGORIES,
+  hasPhoto,
   isEntered,
   isUsdPending,
   type Expense,
@@ -18,6 +19,7 @@ const exp = (gbp: number | null, usd: number | null): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
 });
 
 describe('categories', () => {
@@ -59,5 +61,19 @@ describe('isEntered', () => {
     const legacy = exp(10, 12) as Partial<Expense>;
     delete legacy.entered;
     expect(isEntered(legacy as Expense)).toBe(false);
+  });
+});
+
+describe('hasPhoto', () => {
+  it('is true only when at least one photo is attached', () => {
+    expect(hasPhoto({ ...exp(10, 12), photoIds: ['p1'] })).toBe(true);
+    expect(hasPhoto({ ...exp(10, 12), photoIds: [] })).toBe(false);
+  });
+
+  it('treats a legacy row missing the field as having no photo', () => {
+    // Rows persisted before receipt photos existed have no such field.
+    const legacy = exp(10, 12) as Partial<Expense>;
+    delete legacy.photoIds;
+    expect(hasPhoto(legacy as Expense)).toBe(false);
   });
 });

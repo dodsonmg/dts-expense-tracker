@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useTrips } from './useTrips';
-import { __clearForTests, loadExpenses } from './db';
+import { __clearForTests, loadExpenses, saveExpenses } from './db';
 import type { Expense, TripBackup } from './types';
 
 const exp = (over: Partial<Expense> = {}): Expense => ({
@@ -15,6 +15,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 
@@ -214,5 +215,21 @@ describe('useTrips', () => {
     expect(all.map((t) => t.id).sort()).toEqual(
       [result.current.trips[0].id, secondId].sort(),
     );
+  });
+
+  it('loadAllTripsData strips photoIds — photos never travel in a backup', async () => {
+    const { result } = renderHook(() => useTrips());
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    const tripId = result.current.trips[0].id;
+
+    await saveExpenses(tripId, [
+      exp({ id: 'e1', photoIds: ['p1'] }),
+      exp({ id: 'e2', photoIds: [] }),
+    ]);
+
+    const all = await result.current.loadAllTripsData();
+    expect(all[0].expenses.map((e) => e.photoIds)).toEqual([[], []]);
+    // The stripping is for the backup only — storage keeps the reference.
+    expect((await loadExpenses(tripId))[0].photoIds).toEqual(['p1']);
   });
 });
