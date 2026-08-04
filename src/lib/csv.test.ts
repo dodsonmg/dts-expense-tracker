@@ -38,8 +38,8 @@ describe('buildCsv', () => {
     const line = csv
       .split('\r\n')
       .find((l) => l.startsWith('2026-07-01'))!;
-    // date,category,gbp,usd,payment,usd_pending,entered_in_dts,miles,rate,note
-    expect(line).toBe('2026-07-01,LODGING,80.00,,GTCC,yes,,,,');
+    // date,category,gbp,usd,payment,usd_pending,entered_in_dts,miles,rate,receipt_no,note
+    expect(line).toBe('2026-07-01,LODGING,80.00,,GTCC,yes,,,,,');
   });
 
   it('flags USD-pending rows (GBP present, USD absent)', () => {
@@ -50,8 +50,8 @@ describe('buildCsv', () => {
   it('does not flag rows once USD is filled in', () => {
     const csv = buildCsv([exp({ amount_gbp: 5, amount_usd: 6 })], []);
     const line = csv.split('\r\n').find((l) => l.startsWith('2026-07-01'))!;
-    // ...payment,usd_pending(blank),entered_in_dts(blank),miles(blank),rate(blank),note(blank)
-    expect(line.endsWith(',GTCC,,,,,')).toBe(true);
+    // ...payment,usd_pending,entered_in_dts,miles,rate,receipt_no,note — all blank
+    expect(line.endsWith(',GTCC,,,,,,')).toBe(true);
   });
 
   it('has an entered_in_dts column and flags entered rows', () => {
@@ -213,5 +213,29 @@ describe('csvFilename', () => {
     expect(csvFilename('', new Date('2026-07-04T12:00:00Z'))).toBe(
       'dts-expenses-trip-2026-07-04.csv',
     );
+  });
+});
+
+describe('buildCsv — receipt numbering', () => {
+  it('numbers only rows with a photo, sequentially', () => {
+    const csv = buildCsv(
+      [
+        exp({ id: 'a', date: '2026-07-01', photoIds: ['p1'] }),
+        exp({ id: 'b', date: '2026-07-02', photoIds: [] }),
+        exp({ id: 'c', date: '2026-07-03', photoIds: ['p2'] }),
+      ],
+      [],
+    );
+    const cell = (dateStr: string) =>
+      csv.split('\r\n').find((l) => l.startsWith(dateStr))!.split(',')[9];
+
+    expect(cell('2026-07-01')).toBe('1');
+    expect(cell('2026-07-02')).toBe('');
+    expect(cell('2026-07-03')).toBe('2');
+  });
+
+  it('has a receipt_no header between rate and note', () => {
+    const header = buildCsv([], []).split('\r\n')[1];
+    expect(header).toContain('rate,receipt_no,note');
   });
 });

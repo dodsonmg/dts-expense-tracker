@@ -89,6 +89,10 @@ npm test           # vitest run
   - `report.ts` — one structured export model consumed by both exporters, so
     CSV and XLSX never drift.
   - `csv.ts` — CSV export document.
+  - `zip.ts` — the receipts bundle (`.xlsx` + numbered photo files) for the
+    office's DTS evidence step. Pure: blobs are passed in already fetched, it
+    never touches IndexedDB. JSZip is dynamically imported (same convention as
+    ExcelJS).
   - `xlsx.ts` — formatted `.xlsx` (ExcelJS, dynamically imported to stay out of
     the main bundle).
   - `backup.ts` — whole-**device** JSON backup/restore (`BACKUP_VERSION = 2`):
@@ -230,8 +234,8 @@ thinking the field is pounds-only. See `HelpView`'s "What does £€¥ mean?" FA
 ## Export contract
 
 `buildCsv` emits one file: `EXPENSES` rows (with `usd_pending`,
-`entered_in_dts`, and `miles`/`rate` — MILEAGE-only, blank elsewhere —
-columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
+`entered_in_dts`, `miles`/`rate` — MILEAGE-only, blank elsewhere — and
+`receipt_no` columns), then `M&IE SEGMENTS`, then `TOTALS BY CATEGORY`,
 then `TOTALS BY ACCOUNT` (a `Total` row — GTCC + Personal, reconciled
 independently via `reconcileAccountTotal` — first, then `GTCC`/`Personal`).
 The two totals blocks carry the DTS comparison
@@ -245,11 +249,25 @@ The formatted `.xlsx` (`buildXlsx`, ExcelJS) renders from the same `report.ts`
 model: a **Reconcile** sheet with the by-category and by-account tables at the
 top (mismatch rows red, USD-incomplete rows yellow — incomplete wins when
 both apply), then **Expenses** (raw rows, USD-pending rows yellow, Miles/Rate
-columns before Note) and **M&IE** sheets. Both exporters must render from
-`buildReport` so they never diverge.
+and Receipt # columns before Note) and **M&IE** sheets. Both exporters must
+render from `buildReport` so they never diverge.
 ExcelJS is dynamically imported; keep it out of any statically-loaded module. The export must stay
 usable as a standalone spreadsheet (it's the reconciliation view at the office,
 where phones are banned).
+
+A third export bundles the two together for the office's evidence step
+(`lib/zip.ts`, `buildReceiptZip`): the same `.xlsx` at the zip root plus
+`receipts/receipt-NN.jpg` per attached photo, where `NN` is the
+`ReportExpenseRow.receiptNo` printed in the sheet's `Receipt #` column — key
+row N into DTS, attach `receipt-N.jpg`. `receiptNo` is assigned in
+`buildReport` (sequential across photo-bearing rows, `null` otherwise) so the
+sheet and the filenames can't disagree, and is **recomputed per export, never
+persisted** — a bundle is internally consistent even though numbering shifts
+between exports. Names are zero-padded to the widest number so they sort
+naturally in Finder. JSZip is dynamically imported like ExcelJS, and the
+archive uses `STORE` (xlsx and jpg are already compressed). `ExportView` hides
+the button entirely unless some expense has a photo, and a photo whose blob has
+gone missing is skipped rather than failing the export.
 
 ## PWA behavior
 
@@ -291,7 +309,9 @@ the same file as a plain icon.
 MVP (this scaffold) is Phase 1. Phases 2–3 in `SPEC.md` are done: DTS
 reconciliation (check-off, mismatch flags, `.xlsx` export), multi-trip +
 backup/restore + MILEAGE calculator + PWA install/offline polish (icon,
-update toast, Help/FAQ tab). Phase 4 — receipt photos and interactive laptop
-import — is not started; don't pull that work forward without being asked.
-Trip archiving + the backup nudge toast (Phase 5, invariant 12) were added
-beyond the original phased plan.
+update toast, Help/FAQ tab). Phase 4's **receipt photos** (item 12, invariant
+13) are done: one photo per expense, compressed on capture, device-local, with
+the numbered `.zip` bundle for the office. Phase 4's other half — **interactive
+laptop import** (item 13) — is not started; don't pull that work forward
+without being asked. Trip archiving + the backup nudge toast (Phase 5,
+invariant 12) were added beyond the original phased plan.

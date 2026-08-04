@@ -197,7 +197,21 @@ Two tables, GBP and USD kept separate throughout:
     comparable against DTS; the calculator is an input convenience only.
 
 **Phase 4 — nice-to-haves**
-12. Receipt photos.
+12. ~~Receipt photos.~~ **Done** — one photo per expense, attachable both at
+    entry time and later from the List. Downscaled to a 1600px longest edge
+    (JPEG q0.72) before storage, so a trip's receipts don't fill the phone;
+    stored as their own `trip:<id>:photo:<photoId>` IndexedDB values rather
+    than inline in the expenses array. **Device-local: photos are the one
+    thing the whole-device backup does not carry** (see CLAUDE.md invariant
+    13) — the file is text, and embedding images would make it enormous, so
+    `photoIds` is zeroed both when a backup is built and when one is parsed,
+    and a restore can never produce a dangling reference. Instead they reach
+    the office via a new **receipts `.zip`** export: the same formatted
+    `.xlsx` plus `receipts/receipt-NN.jpg` per photo, numbered to match a new
+    `Receipt #` / `receipt_no` column in the sheet — so each line can be keyed
+    into DTS with its evidence attached. The model keeps multiple photos per
+    expense open (`photoIds` is a list, each photo already has its own key);
+    only the attach behavior and the 1:1 zip numbering enforce the cap.
 13. Interactive laptop reconciliation via file import / self-contained HTML export.
 
 **Phase 5 — trip archiving & backup nudge**

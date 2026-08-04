@@ -121,6 +121,17 @@ CSV is readable directly (`buf.toString('utf8')`); for `.xlsx`, load it with
 `exceljs` (already a project dependency) the same way `xlsx.test.ts`'s
 `readBack` helper does.
 
+The receipts bundle — `getByRole('button', { name: /receipts \(\.zip\)/i })` —
+is **only rendered when at least one expense has a photo**, so attach one first
+or you'll be hunting a button that was never mounted. It goes through
+`shareBlob`, so headless Chromium falls back to a download like the others.
+Read it back with `JSZip.loadAsync(buf)` (a project dependency) and check
+`Object.values(zip.files).filter(f => !f.dir).map(f => f.name)` — note JSZip
+also emits an implicit `receipts/` directory entry. The numbers in
+`receipts/receipt-NN.jpg` must line up with the `Receipt #` column (index 9,
+0-based) of the `.xlsx`'s Expenses sheet; that pairing is the whole point of
+the feature, so assert it rather than eyeballing the file list.
+
 ## Backup / restore
 
 Also on the Export tab, below the CSV/xlsx buttons, in a "Backup" card:

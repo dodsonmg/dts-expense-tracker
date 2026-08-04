@@ -99,8 +99,8 @@ export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) 
       {error && <p className="muted small">{error}</p>}
       {!previewUrl && !busy && !error && (
         <p className="muted small">
-          Optional. Stays on this device — photos are not included in the
-          backup file.
+          Optional. Stays on this device — photos aren&apos;t in the backup
+          file, but they do go in the receipts .zip export.
         </p>
       )}
     </div>

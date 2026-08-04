@@ -35,13 +35,21 @@ product spec.
   top and raw rows behind, plus a plain **CSV** (`usd_incomplete` column).
   Shared via the iOS share sheet (Mail) or downloaded; both usable as
   standalone spreadsheets.
+- **Receipt photos** — attach one photo per expense, either as you add it or
+  later from the List; it's downscaled on capture so a trip's receipts stay
+  small. Tap the **Photo** marker on a row to view it full-screen. For the
+  office, a **receipts `.zip`** bundles the `.xlsx` with one image per
+  receipt, named to match the sheet's **Receipt #** column — key line *N* into
+  DTS and attach `receipt-0N.jpg` as evidence. Photos live on the device only
+  and are the one thing the backup file doesn't carry.
 - **Multi-trip** — create/rename/delete trips from the header's trip switcher;
   each trip's expenses/M&IE segments/DTS totals are stored separately, and
   export is always scoped to whichever trip is active. A device always has
   at least one trip. Finished trips can be **archived** (hidden, not
   deleted) via the same switcher, and unarchived just as easily.
 - **Backup/restore** — a single JSON file with every trip on the device
-  (expenses, M&IE segments, DTS totals), for moving to a new phone. Restoring
+  (expenses, M&IE segments, DTS totals — but not receipt photos, which stay
+  local), for moving to a new phone. Restoring
   **replaces** every trip on the device; a confirmation step shows what will
   be replaced before it happens. A dismissible toast nudges toward backing up
   once it's been a while and enough has changed since the last one.
@@ -93,7 +101,7 @@ mode). Data persists across reloads via IndexedDB.
 
 ```
 src/
-  types.ts          Domain model + fixed category set; isUsdPending / isEntered
+  types.ts          Domain model + fixed category set; isUsdPending / isEntered / hasPhoto
   db.ts             IndexedDB load/save (localForage), per-trip prefixed keys
   useTrips.ts       Trip list + active trip id; create/rename/delete/select/archive
   useTripData.ts    One trip's data (keyed by tripId, reloads on trip switch)
@@ -108,10 +116,13 @@ src/
     report.ts       Shared export model consumed by both exporters
     csv.ts          CSV export (per-trip filename)
     xlsx.ts         Formatted .xlsx export (ExcelJS, dynamically imported)
+    zip.ts          Receipts bundle: .xlsx + numbered photos (JSZip, dynamic)
+    photo.ts        Receipt photo downscale/re-encode before storage
     backup.ts       Whole-device JSON backup/restore (all trips; v1→v2 migration)
     format.ts       Currency + date helpers; slugify (export filenames)
   components/       One file per screen (Entry, List, M&IE, Totals, Export,
                     Help) + TripSwitcher (header) + UpdateToast/BackupNudgeToast (banners)
+                    + PhotoField (shared picker) / PhotoLightbox (full-screen view)
   App.tsx           Tab shell
 scripts/gen-icons.mjs  Rasterizes the hedgehog SVG to every icon size
                        (Playwright/headless Chromium)
@@ -157,4 +168,5 @@ The app icon is regenerated with `npm run gen-icons` (needs
 and deployed, plus **Phase 5 (trip archiving & backup nudge)** — see
 [`SPEC.md`](./SPEC.md) for details. Remaining:
 
-- **Phase 4 — nice-to-haves:** receipt photos, interactive laptop import.
+- **Phase 4 — nice-to-haves:** ~~receipt photos~~ (done — see above);
+  interactive laptop import is not started.

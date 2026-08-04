@@ -128,6 +128,9 @@ export async function buildXlsx(
     { header: 'Entered in DTS', width: 14 },
     { header: 'Miles', width: 9 },
     { header: 'Rate', width: 9 },
+    // Matches receipts/receipt-NN.jpg in the .zip export, so each line can be
+    // keyed into DTS with its evidence attached.
+    { header: 'Receipt #', width: 10 },
     { header: 'Note', width: 28 },
   ];
   exp.getRow(1).font = { bold: true };
@@ -142,6 +145,7 @@ export async function buildXlsx(
       e.entered ? 'yes' : '',
       e.miles,
       e.rate,
+      e.receiptNo,
       e.note,
     ]);
     row.getCell(3).numFmt = MONEY_FMT;
@@ -149,7 +153,7 @@ export async function buildXlsx(
     row.getCell(8).numFmt = '0.0';
     row.getCell(9).numFmt = '0.000'; // DTS/GSA rates are sometimes 3dp
     if (e.usdPending) {
-      for (let i = 1; i <= 10; i++) row.getCell(i).fill = pendingFill();
+      for (let i = 1; i <= 11; i++) row.getCell(i).fill = pendingFill();
     }
   }
 

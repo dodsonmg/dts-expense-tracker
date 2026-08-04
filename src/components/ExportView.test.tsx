@@ -36,6 +36,7 @@ describe('ExportView', () => {
   it('offers .xlsx (primary) and CSV exports', () => {
     render(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[exp()]}
         segments={[]}
@@ -59,6 +60,7 @@ describe('ExportView', () => {
   it('disables export when there is nothing to export', () => {
     render(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[]}
         segments={[]}
@@ -81,6 +83,7 @@ describe('ExportView', () => {
     const onBackedUp = vi.fn();
     render(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[]}
         segments={[]}
@@ -122,6 +125,7 @@ describe('ExportView', () => {
     const onRestore = vi.fn();
     render(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[]}
         segments={[]}
@@ -155,6 +159,7 @@ describe('ExportView', () => {
     const onBackedUp = vi.fn();
     render(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[exp()]}
         segments={[]}
@@ -174,6 +179,7 @@ describe('ExportView', () => {
   it('shows when the device was last backed up, or that it never was', () => {
     const { rerender } = render(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[exp()]}
         segments={[]}
@@ -189,6 +195,7 @@ describe('ExportView', () => {
 
     rerender(
       <ExportView
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
         tripName="London Aug 2026"
         expenses={[exp()]}
         segments={[]}
@@ -201,5 +208,88 @@ describe('ExportView', () => {
       />,
     );
     expect(screen.getByText(/last backup: 2 days ago/i)).toBeInTheDocument();
+  });
+});
+
+describe('ExportView — receipts zip', () => {
+  const base = {
+    tripName: 'London Aug 2026',
+    segments: [],
+    expected: {},
+    accountExpected: noAccounts,
+    onDownloadBackup: vi.fn(),
+    onRestore: vi.fn(),
+    lastBackup: null,
+    onBackedUp: vi.fn(),
+  };
+
+  it('is hidden when no expense has a photo', () => {
+    render(
+      <ExportView
+        {...base}
+        expenses={[exp({ photoIds: [] })]}
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /receipts \(\.zip\)/i })).toBeNull();
+  });
+
+  it('appears once a photo exists, and explains the numbering', () => {
+    render(
+      <ExportView
+        {...base}
+        expenses={[exp({ id: 'a', photoIds: ['p1'] }), exp({ id: 'b' })]}
+        onLoadPhoto={vi.fn().mockResolvedValue(null)}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /receipts \(\.zip\)/i }),
+    ).toBeEnabled();
+    // Singular: only one of the two expenses has a photo.
+    expect(screen.getByText(/1 receipt photo\b/)).toBeInTheDocument();
+    expect(screen.getByText(/Receipt #/)).toBeInTheDocument();
+  });
+
+  it('fetches only the blobs of expenses that have one', async () => {
+    const onLoadPhoto = vi
+      .fn()
+      .mockResolvedValue(new Blob(['bytes'], { type: 'image/jpeg' }));
+    render(
+      <ExportView
+        {...base}
+        expenses={[
+          exp({ id: 'a', photoIds: ['p1'] }),
+          exp({ id: 'b', photoIds: [] }),
+          exp({ id: 'c', photoIds: ['p2'] }),
+        ]}
+        onLoadPhoto={onLoadPhoto}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /receipts \(\.zip\)/i }));
+
+    await waitFor(() => expect(onLoadPhoto).toHaveBeenCalledTimes(2));
+    expect(onLoadPhoto).toHaveBeenCalledWith('p1');
+    expect(onLoadPhoto).toHaveBeenCalledWith('p2');
+  });
+
+  it('still exports when a photo blob has gone missing', async () => {
+    // A dangling reference shouldn't sink the whole export — the sheet still
+    // has the row, it just won't have evidence attached.
+    const onLoadPhoto = vi.fn().mockResolvedValue(null);
+    render(
+      <ExportView
+        {...base}
+        expenses={[exp({ id: 'a', photoIds: ['gone'] })]}
+        onLoadPhoto={onLoadPhoto}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /receipts \(\.zip\)/i }));
+
+    await waitFor(() => expect(onLoadPhoto).toHaveBeenCalled());
+    expect(screen.queryByText(/export failed/i)).toBeNull();
   });
 });
