@@ -1,8 +1,14 @@
 import type { Currency } from '../types';
 
-const gbp = new Intl.NumberFormat('en-GB', {
-  style: 'currency',
-  currency: 'GBP',
+// Stands in for "whatever foreign currency is on the receipt" — the app
+// doesn't track which one. Symbols only (no $), picked to read together at a
+// glance. See HelpView's FAQ for the user-facing explanation.
+export const FOREIGN_SYMBOL = '£€¥';
+
+const foreign = new Intl.NumberFormat('en-US', {
+  style: 'decimal',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 const usd = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -11,7 +17,8 @@ const usd = new Intl.NumberFormat('en-US', {
 
 export function money(amount: number | null, currency: Currency): string {
   if (amount == null) return '—';
-  return (currency === 'GBP' ? gbp : usd).format(amount);
+  if (currency === 'USD') return usd.format(amount);
+  return `${FOREIGN_SYMBOL}${foreign.format(amount)}`;
 }
 
 // Today's local date as YYYY-MM-DD (for the entry-form default).

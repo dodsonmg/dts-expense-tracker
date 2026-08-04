@@ -12,17 +12,19 @@ product spec.
 
 ## Features
 
-- **Fast expense entry** — category and payment dropdowns, GBP and USD side by
-  side, date defaulting to today but freely editable.
-- **Dual currency, no conversion** — GBP (receipt) and USD (DTS) are tracked
-  separately and **never summed together**. An expense with GBP but no USD yet
-  is flagged **"USD pending."**
+- **Fast expense entry** — category and payment dropdowns, foreign-currency
+  (**£€¥**) and USD side by side, date defaulting to today but freely
+  editable. The **£€¥** field isn't currency-specific — it just means
+  "whatever's on the receipt," pounds, euros, yen, or otherwise.
+- **Dual currency, no conversion** — the foreign-currency amount (receipt) and
+  USD (DTS) are tracked separately and **never summed together**. An expense
+  with a foreign amount but no USD yet is flagged **"USD pending."**
 - **M&IE per-diem calculator** — multi-segment (full/partial days × rates),
   USD only, always counted toward the Personal account.
 - **MILEAGE calculator** — miles × rate computes the USD amount, but (unlike
   M&IE) each leg stays its own itemized row, since DTS shows mileage
   leg-by-leg rather than as one lump total. A toggle switches to manual
-  USD/GBP entry when the calculator doesn't fit.
+  USD/foreign-currency entry when the calculator doesn't fit.
 - **DTS reconciliation** — enter the USD totals DTS shows per category and per
   account (GTCC/Personal reimbursement); the app flags mismatches with a signed
   delta, and separately flags a row as **"incomplete"** (yellow) if any of its

@@ -2,16 +2,19 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntryForm } from './EntryForm';
+import { FOREIGN_SYMBOL } from '../lib/format';
+
+const foreignLabel = new RegExp(FOREIGN_SYMBOL);
 
 describe('EntryForm', () => {
-  it('cannot save until a GBP or USD amount is entered', async () => {
+  it('cannot save until a foreign-currency or USD amount is entered', async () => {
     const user = userEvent.setup();
     render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
 
     const save = screen.getByRole('button', { name: /save & add another/i });
     expect(save).toBeDisabled();
 
-    await user.type(screen.getByLabelText(/GBP/i), '80');
+    await user.type(screen.getByLabelText(foreignLabel), '80');
     expect(save).toBeEnabled();
   });
 
@@ -39,7 +42,7 @@ describe('EntryForm', () => {
     const user = userEvent.setup();
     render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
 
-    const gbp = screen.getByLabelText(/GBP/i) as HTMLInputElement;
+    const gbp = screen.getByLabelText(foreignLabel) as HTMLInputElement;
     await user.type(gbp, '80');
     await user.click(screen.getByRole('button', { name: /save & add another/i }));
 
@@ -48,13 +51,13 @@ describe('EntryForm', () => {
 });
 
 describe('EntryForm — MILEAGE calculator', () => {
-  it('swaps the GBP/USD fields for Miles/Rate when MILEAGE is selected', async () => {
+  it('swaps the foreign-currency/USD fields for Miles/Rate when MILEAGE is selected', async () => {
     const user = userEvent.setup();
     render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
 
     await user.selectOptions(screen.getByLabelText('Category'), 'MILEAGE');
 
-    expect(screen.queryByLabelText(/GBP/i)).toBeNull();
+    expect(screen.queryByLabelText(foreignLabel)).toBeNull();
     expect(screen.queryByLabelText(/USD \(DTS\)/i)).toBeNull();
     expect(screen.getByLabelText('Miles')).toBeInTheDocument();
     expect(screen.getByLabelText(/Rate/i)).toBeInTheDocument();
@@ -99,7 +102,7 @@ describe('EntryForm — MILEAGE calculator', () => {
     expect(rate.value).toBe('0.67');
   });
 
-  it('restores the GBP/USD fields when switching away from MILEAGE', async () => {
+  it('restores the foreign-currency/USD fields when switching away from MILEAGE', async () => {
     const user = userEvent.setup();
     render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
 
@@ -108,11 +111,11 @@ describe('EntryForm — MILEAGE calculator', () => {
     await user.selectOptions(category, 'LODGING');
 
     expect(screen.queryByLabelText('Miles')).toBeNull();
-    expect(screen.getByLabelText(/GBP/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(foreignLabel)).toBeInTheDocument();
     expect(screen.getByLabelText(/USD \(DTS\)/i)).toBeInTheDocument();
   });
 
-  it('offers a manual-entry toggle that switches back to plain GBP/USD fields', async () => {
+  it('offers a manual-entry toggle that switches back to plain foreign-currency/USD fields', async () => {
     const user = userEvent.setup();
     render(<EntryForm onAdd={vi.fn()} onDone={vi.fn()} />);
 
@@ -122,14 +125,14 @@ describe('EntryForm — MILEAGE calculator', () => {
     );
 
     expect(screen.queryByLabelText('Miles')).toBeNull();
-    expect(screen.getByLabelText(/GBP/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(foreignLabel)).toBeInTheDocument();
     expect(screen.getByLabelText(/USD \(DTS\)/i)).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Use miles × rate calculator instead' }),
     ).toBeInTheDocument();
   });
 
-  it('submits typed GBP/USD with null miles/rate in manual mode', async () => {
+  it('submits typed foreign-currency/USD with null miles/rate in manual mode', async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
     render(<EntryForm onAdd={onAdd} onDone={vi.fn()} />);
