@@ -13,6 +13,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 

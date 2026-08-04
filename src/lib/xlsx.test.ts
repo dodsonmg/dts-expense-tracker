@@ -13,6 +13,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 
@@ -165,6 +166,7 @@ describe('buildXlsx', () => {
           amount_usd: 28.14,
           miles: 42,
           rate: 0.67,
+          photoIds: [],
           note: 'leg 1',
         }),
       ],

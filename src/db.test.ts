@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   __clearForTests,
+  deletePhoto,
   deleteTripStorage,
   ensureInitialized,
   loadActiveTripId,
@@ -8,6 +9,7 @@ import {
   loadDtsExpected,
   loadExpenses,
   loadLastBackup,
+  loadPhoto,
   loadSegments,
   loadTrips,
   saveActiveTripId,
@@ -16,6 +18,7 @@ import {
   saveDtsExpected,
   saveExpenses,
   saveLastBackup,
+  savePhoto,
   saveSegments,
   saveTrips,
 } from './db';
@@ -32,6 +35,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 
@@ -142,6 +146,15 @@ describe('per-trip data scoping', () => {
     expect(await loadExpenses('t2')).toHaveLength(1);
   });
 
+  it('normalizes legacy rows stored without photoIds', async () => {
+    // A row persisted before receipt photos existed: no photoIds key at all.
+    const legacy = exp() as Partial<Expense>;
+    delete legacy.photoIds;
+    await saveExpenses('t1', [legacy as Expense]);
+
+    expect((await loadExpenses('t1'))[0].photoIds).toEqual([]);
+  });
+
   it('saveAllTripsData bulk-writes multiple trips correctly', async () => {
     const backups: TripBackup[] = [
       {
@@ -168,6 +181,55 @@ describe('per-trip data scoping', () => {
 
     expect((await loadExpenses('t1'))[0].note).toBe('one');
     expect((await loadExpenses('t2'))[0].note).toBe('two');
+  });
+});
+
+describe('receipt photo blobs', () => {
+  const blob = (text: string) => new Blob([text], { type: 'image/jpeg' });
+
+  it('round-trips a photo blob, preserving bytes and MIME type', async () => {
+    await savePhoto('t1', 'p1', blob('receipt bytes'));
+
+    const loaded = await loadPhoto('t1', 'p1');
+    expect(loaded).not.toBeNull();
+    expect(await loaded!.text()).toBe('receipt bytes');
+    expect(loaded!.type).toBe('image/jpeg');
+  });
+
+  it('returns null for a photo that was never saved', async () => {
+    expect(await loadPhoto('t1', 'nope')).toBeNull();
+  });
+
+  it('scopes photos by trip — same photo id in two trips does not collide', async () => {
+    await savePhoto('t1', 'p1', blob('one'));
+    await savePhoto('t2', 'p1', blob('two'));
+
+    expect(await (await loadPhoto('t1', 'p1'))!.text()).toBe('one');
+    expect(await (await loadPhoto('t2', 'p1'))!.text()).toBe('two');
+  });
+
+  it('deletePhoto removes just that photo', async () => {
+    await savePhoto('t1', 'p1', blob('one'));
+    await savePhoto('t1', 'p2', blob('two'));
+
+    await deletePhoto('t1', 'p1');
+
+    expect(await loadPhoto('t1', 'p1')).toBeNull();
+    expect(await loadPhoto('t1', 'p2')).not.toBeNull();
+  });
+
+  it('deleteTripStorage sweeps every photo of that trip and no others', async () => {
+    await savePhoto('t1', 'p1', blob('a'));
+    await savePhoto('t1', 'p2', blob('b'));
+    await savePhoto('t1', 'p3', blob('c'));
+    await savePhoto('t2', 'p1', blob('other trip'));
+
+    await deleteTripStorage('t1');
+
+    expect(await loadPhoto('t1', 'p1')).toBeNull();
+    expect(await loadPhoto('t1', 'p2')).toBeNull();
+    expect(await loadPhoto('t1', 'p3')).toBeNull();
+    expect(await loadPhoto('t2', 'p1')).not.toBeNull();
   });
 });
 

@@ -83,6 +83,7 @@ describe('EntryForm — MILEAGE calculator', () => {
         amount_usd: 28.14,
         miles: 42,
         rate: 0.67,
+        photoIds: [],
       }),
     );
   });
@@ -151,6 +152,7 @@ describe('EntryForm — MILEAGE calculator', () => {
         amount_usd: 50,
         miles: null,
         rate: null,
+        photoIds: [],
       }),
     );
   });

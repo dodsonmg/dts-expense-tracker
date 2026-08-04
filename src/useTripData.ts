@@ -7,13 +7,16 @@ import type {
   MieSegment,
 } from './types';
 import {
+  deletePhoto,
   loadDtsAccountExpected,
   loadDtsExpected,
   loadExpenses,
+  loadPhoto,
   loadSegments,
   saveDtsAccountExpected,
   saveDtsExpected,
   saveExpenses,
+  savePhoto,
   saveSegments,
 } from './db';
 import { newId } from './lib/id';
@@ -82,8 +85,13 @@ export function useTripData(tripId: string, reloadEpoch = 0) {
     if (ready) void saveDtsAccountExpected(tripId, dtsAccountExpected);
   }, [ready, tripId, dtsAccountExpected]);
 
-  const addExpense = useCallback((data: Omit<Expense, 'id'>) => {
-    setExpenses((prev) => [{ ...data, id: newId() }, ...prev]);
+  // Returns the new expense's id so a caller can immediately associate
+  // something with it — EntryForm needs this to attach a receipt photo to a
+  // row it has only just created.
+  const addExpense = useCallback((data: Omit<Expense, 'id'>): string => {
+    const id = newId();
+    setExpenses((prev) => [{ ...data, id }, ...prev]);
+    return id;
   }, []);
 
   const updateExpense = useCallback((id: string, patch: Partial<Expense>) => {
@@ -92,9 +100,51 @@ export function useTripData(tripId: string, reloadEpoch = 0) {
     );
   }, []);
 
-  const deleteExpense = useCallback((id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+  // Photo blob IO deliberately sits *outside* the setExpenses updater, reading
+  // current state from this closure instead of from `prev`. React re-invokes
+  // updaters (Strict Mode) to catch impurity, which would fire these writes
+  // twice; the state update itself still uses the updater form so it composes
+  // correctly with any other queued update.
+  const attachPhoto = useCallback(
+    (expenseId: string, blob: Blob): void => {
+      const photoId = newId();
+      // Empty for a row added in this same tick (React hasn't re-rendered yet)
+      // — correct, since a brand-new expense has no previous photo to sweep.
+      const superseded = expenses.find((e) => e.id === expenseId)?.photoIds ?? [];
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === expenseId ? { ...e, photoIds: [photoId] } : e)),
+      );
+      void savePhoto(tripId, photoId, blob).then(() =>
+        Promise.all(superseded.map((pid) => deletePhoto(tripId, pid))),
+      );
+    },
+    [expenses, tripId],
+  );
+
+  const removePhoto = useCallback(
+    (expenseId: string): void => {
+      const removed = expenses.find((e) => e.id === expenseId)?.photoIds ?? [];
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === expenseId ? { ...e, photoIds: [] } : e)),
+      );
+      void Promise.all(removed.map((pid) => deletePhoto(tripId, pid)));
+    },
+    [expenses, tripId],
+  );
+
+  const getPhoto = useCallback(
+    (photoId: string): Promise<Blob | null> => loadPhoto(tripId, photoId),
+    [tripId],
+  );
+
+  const deleteExpense = useCallback(
+    (id: string) => {
+      const orphaned = expenses.find((e) => e.id === id)?.photoIds ?? [];
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+      void Promise.all(orphaned.map((pid) => deletePhoto(tripId, pid)));
+    },
+    [expenses, tripId],
+  );
 
   const addSegment = useCallback((data: Omit<MieSegment, 'id'>) => {
     setSegments((prev) => [...prev, { ...data, id: newId() }]);
@@ -139,6 +189,9 @@ export function useTripData(tripId: string, reloadEpoch = 0) {
     addExpense,
     updateExpense,
     deleteExpense,
+    attachPhoto,
+    removePhoto,
+    getPhoto,
     addSegment,
     updateSegment,
     deleteSegment,

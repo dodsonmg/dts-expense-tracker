@@ -61,6 +61,7 @@ export function EntryForm({ onAdd, onDone }: Props) {
       entered: false, // new expenses haven't been keyed into DTS yet
       miles: useCalculator ? milesNum : null,
       rate: useCalculator ? rateNum : null,
+      photoIds: [], // attached separately, after the row has an id
     });
     setGbp('');
     setUsd('');

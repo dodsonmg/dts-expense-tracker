@@ -79,7 +79,11 @@ function validateTripData(
   // rejecting/losing an otherwise-valid backup.
   const dtsAccountExpectedRaw = b.dtsAccountExpected as Partial<DtsAccountExpected>;
   return {
-    expenses: b.expenses,
+    // Receipt photo blobs are device-local and never in a backup file, so any
+    // photoIds present here (hand-edited file, or a future version) would be
+    // dangling references. useTrips.loadAllTripsData already zeroes them on
+    // the way out; this is the matching guard on the way in.
+    expenses: b.expenses.map((e) => ({ ...e, photoIds: [] })),
     segments: b.segments,
     dtsExpected: b.dtsExpected as DtsExpected,
     dtsAccountExpected: {

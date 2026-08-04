@@ -23,6 +23,14 @@ const store = localforage.createInstance({
 type TripField = 'expenses' | 'segments' | 'dtsExpected' | 'dtsAccountExpected';
 const tripKey = (tripId: string, field: TripField) => `trip:${tripId}:${field}`;
 
+// Receipt photo blobs get one key each, outside the expenses array, so editing
+// an expense's fields never re-serializes photo bytes (and vice versa). Unlike
+// the four fixed TripFields above there are a variable number of these per
+// trip, so deletion needs a prefix scan (see deleteTripPhotos).
+const photoPrefix = (tripId: string) => `trip:${tripId}:photo:`;
+const photoKey = (tripId: string, photoId: string) =>
+  `${photoPrefix(tripId)}${photoId}`;
+
 const GLOBAL_KEYS = {
   trips: 'trips',
   activeTripId: 'activeTripId',
@@ -50,13 +58,15 @@ const LEGACY_KEYS = {
 
 // Normalize rows saved before a field was added: default `entered` for legacy
 // rows persisted without it (undefined -> false), same for the mileage
-// calculator's miles/rate (undefined -> null).
+// calculator's miles/rate (undefined -> null) and receipt photoIds
+// (undefined -> []).
 function normalizeExpenseRows(stored: Expense[]): Expense[] {
   return stored.map((e) => ({
     ...e,
     entered: e.entered ?? false,
     miles: e.miles ?? null,
     rate: e.rate ?? null,
+    photoIds: e.photoIds ?? [],
   }));
 }
 
@@ -139,12 +149,62 @@ export async function saveDtsAccountExpected(
   await store.setItem(tripKey(tripId, 'dtsAccountExpected'), expected);
 }
 
+// Photos are stored as raw bytes + MIME type rather than as a Blob directly.
+// ArrayBuffer is a structured-clone primitive every IndexedDB implementation
+// handles; Blob support is patchier (iOS Safari has a history of dropping
+// them, which is why localforage ships its own workaround), and fake-indexeddb
+// silently clones a Blob to `{}`, which would leave this path untestable.
+// Callers still deal in Blobs — the conversion is contained here.
+interface StoredPhoto {
+  type: string;
+  bytes: ArrayBuffer;
+}
+
+export async function savePhoto(
+  tripId: string,
+  photoId: string,
+  blob: Blob,
+): Promise<void> {
+  const stored: StoredPhoto = {
+    type: blob.type || 'image/jpeg',
+    bytes: await blob.arrayBuffer(),
+  };
+  await store.setItem(photoKey(tripId, photoId), stored);
+}
+
+export async function loadPhoto(
+  tripId: string,
+  photoId: string,
+): Promise<Blob | null> {
+  const stored = await store.getItem<StoredPhoto>(photoKey(tripId, photoId));
+  if (!stored) return null;
+  return new Blob([stored.bytes], { type: stored.type });
+}
+
+export async function deletePhoto(
+  tripId: string,
+  photoId: string,
+): Promise<void> {
+  await store.removeItem(photoKey(tripId, photoId));
+}
+
+// Sweeps every photo blob belonging to a trip. Needs a key scan because the
+// count varies per trip, unlike the four fixed per-trip keys.
+async function deleteTripPhotos(tripId: string): Promise<void> {
+  const prefix = photoPrefix(tripId);
+  const keys = await store.keys();
+  await Promise.all(
+    keys.filter((k) => k.startsWith(prefix)).map((k) => store.removeItem(k)),
+  );
+}
+
 export async function deleteTripStorage(tripId: string): Promise<void> {
   await Promise.all([
     store.removeItem(tripKey(tripId, 'expenses')),
     store.removeItem(tripKey(tripId, 'segments')),
     store.removeItem(tripKey(tripId, 'dtsExpected')),
     store.removeItem(tripKey(tripId, 'dtsAccountExpected')),
+    deleteTripPhotos(tripId),
   ]);
 }
 

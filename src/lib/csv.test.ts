@@ -13,6 +13,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 
@@ -81,6 +82,7 @@ describe('buildCsv', () => {
           amount_usd: 28.14,
           miles: 42,
           rate: 0.67,
+          photoIds: [],
         }),
         exp({ id: 'b', category: 'LODGING', amount_usd: 100 }),
       ],

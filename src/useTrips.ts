@@ -113,11 +113,17 @@ export function useTrips() {
 
   // Reads every trip's full data from storage — only for building a
   // whole-device backup, not on every render.
+  //
+  // photoIds is zeroed here: receipt photo blobs are device-local and never
+  // travel in the backup, so carrying their ids across would restore dangling
+  // references on another device. Zeroed rather than deleted so the field
+  // stays present, as everywhere else. lib/backup.ts's parseBackup zeroes them
+  // again on the way back in.
   const loadAllTripsData = useCallback(async (): Promise<TripBackup[]> => {
     return Promise.all(
       trips.map(async (t) => ({
         ...t,
-        expenses: await loadExpenses(t.id),
+        expenses: (await loadExpenses(t.id)).map((e) => ({ ...e, photoIds: [] })),
         segments: await loadSegments(t.id),
         dtsExpected: await loadDtsExpected(t.id),
         dtsAccountExpected: await loadDtsAccountExpected(t.id),

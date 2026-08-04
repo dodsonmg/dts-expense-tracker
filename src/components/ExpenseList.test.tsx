@@ -18,6 +18,7 @@ const exp = (over: Partial<Expense> = {}): Expense => ({
   entered: false,
   miles: null,
   rate: null,
+  photoIds: [],
   ...over,
 });
 
@@ -146,6 +147,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
             amount_usd: 28.14,
             miles: 42,
             rate: 0.67,
+            photoIds: [],
           }),
         ]}
         onUpdate={vi.fn()}
@@ -180,6 +182,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
             amount_usd: 28.14,
             miles: 42,
             rate: 0.67,
+            photoIds: [],
           }),
         ]}
         onUpdate={onUpdate}
@@ -270,6 +273,7 @@ describe('ExpenseList — MILEAGE calculator', () => {
             amount_usd: 28.14,
             miles: 42,
             rate: 0.67,
+            photoIds: [],
           }),
         ]}
         onUpdate={onUpdate}
