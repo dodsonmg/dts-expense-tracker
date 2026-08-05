@@ -60,8 +60,9 @@ Key selectors (all accessible-name based; the tab bar's icon glyphs are
 
 - Tabs: `page.getByRole('button', { name: 'Entry', exact: true })` — same
   pattern for `List`, `M&IE`, `Totals`, `Export`, `Help`.
-- Help tab: static content, no live data — `getByText('Install on your
-  iPhone')`, FAQ items are native `<details>`/`<summary>`
+- Help tab: static content, no live data — the install card shows steps for
+  both platforms, `getByText('iPhone (Safari)')` / `getByText('Android
+  (Chrome)')`, FAQ items are native `<details>`/`<summary>`
   (`page.locator('details').count()`, click the `summary` text to expand).
 - Entry form: `getByLabel('£€¥ (receipt)')` (the foreign-currency field —
   labeled with a generic currency-symbol combo, not tied to any one
