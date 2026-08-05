@@ -3,10 +3,12 @@ import { render, screen } from '@testing-library/react';
 import { HelpView } from './HelpView';
 
 describe('HelpView', () => {
-  it('shows the install steps', () => {
+  it('shows install steps for both iPhone and Android', () => {
     render(<HelpView />);
-    expect(screen.getByText('Install on your iPhone')).toBeInTheDocument();
+    expect(screen.getByText('iPhone (Safari)')).toBeInTheDocument();
     expect(screen.getByText(/Add to Home Screen/)).toBeInTheDocument();
+    expect(screen.getByText('Android (Chrome)')).toBeInTheDocument();
+    expect(screen.getByText(/Install app/)).toBeInTheDocument();
   });
 
   it('renders each FAQ as a collapsed details/summary', () => {

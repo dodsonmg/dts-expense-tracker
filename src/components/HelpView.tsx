@@ -90,12 +90,22 @@ export function HelpView() {
   return (
     <div className="stack">
       <div className="card">
-        <h2>Install on your iPhone</h2>
+        <h2>Install on your phone</h2>
+
+        <h3 className="help-steps-label">iPhone (Safari)</h3>
         <ol className="help-steps">
-          <li>Open this site in <strong>Safari</strong> (not Chrome — only Safari can add a real full-screen app icon).</li>
+          <li>Open this site in <strong>Safari</strong> — on iOS, only Safari can add a real full-screen app icon (Chrome on iOS can’t).</li>
           <li>Tap the <strong>Share</strong> icon.</li>
           <li>Tap <strong>Add to Home Screen</strong>, then Add.</li>
         </ol>
+
+        <h3 className="help-steps-label">Android (Chrome)</h3>
+        <ol className="help-steps">
+          <li>Open this site in <strong>Chrome</strong>.</li>
+          <li>Tap the <strong>⋮</strong> menu.</li>
+          <li>Tap <strong>Install app</strong> (or <strong>Add to Home screen</strong>), then confirm.</li>
+        </ol>
+
         <p className="muted small">
           Open it at least once while you have signal — after that, it keeps
           working with none.
