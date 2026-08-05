@@ -521,6 +521,15 @@ select:focus {
 }
 
 /* ---- Help/FAQ ---- */
+.help-steps-label {
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.help-steps-label:first-of-type {
+  margin-top: 0.4rem;
+}
 .help-steps,
 .help-faq-list {
   margin: 0.6rem 0;
