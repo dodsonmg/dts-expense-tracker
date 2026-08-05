@@ -82,8 +82,8 @@ Key selectors (all accessible-name based; the tab bar's icon glyphs are
   `setInputFiles` directly rather than clicking the visible button —
   `page.setInputFiles('#entry-photo', {...})` on Entry, and
   `page.locator('input[type=file][id^="edit-"]')` inside `EditRow` (its id
-  folds in the expense id). Both carry `accept="image/*"` and deliberately no
-  `capture` attribute. After picking, wait for
+  folds in the expense id). Both carry `accept="image/*,application/pdf"` and
+  deliberately no `capture` attribute. After picking an image, wait for
   `img[alt="Attached receipt"]` — that's the compressed thumbnail, and its
   `naturalWidth`/`naturalHeight` is the cheapest proof `lib/photo.ts` actually
   ran (a 3024×4032 source should come back 1200×1600). A list row with a photo
@@ -95,6 +95,24 @@ Key selectors (all accessible-name based; the tab bar's icon glyphs are
   **This is the surface that most needs this skill**: jsdom has no `<canvas>`,
   so compression is untestable in vitest and component tests mock
   `lib/photo.ts` entirely.
+  - PDF attachments: pick one via `setInputFiles` with `mimeType:
+    'application/pdf'` (e.g. `{ name: 'receipt.pdf', mimeType:
+    'application/pdf', buffer: Buffer.from('%PDF-1.4\n...') }`) — a PDF is
+    stored as-is (no canvas path), so this is safe to drive against `npm run
+    dev`, unlike the image-compression path above. There is no `<img>` for a
+    PDF: check for the file chip instead (`getByText(/Attached receipt:
+    PDF/i)`). The lightbox renders `embed[type="application/pdf"]` in place
+    of `.lightbox__img` — check via
+    `page.locator('embed[type="application/pdf"]')`, not `getByRole`, since
+    `<embed>` has no implicit ARIA role. A PDF over 10 MB should show the
+    inline error text `/larger than 10 MB/` instead of attaching. **Headless
+    Chromium shows "Couldn't load plugin." inside the embed even for a
+    structurally valid PDF** — its PDF-viewer component doesn't load in
+    headless mode. This is a harness limitation, not an app bug: the element
+    (`embed[type="application/pdf"]`) is still correct, and launching with
+    `headless: false` renders the PDF content normally. Assert on the
+    `<embed>`'s presence/type in headless mode; only fall back to `headless:
+    false` if you need to eyeball the rendered PDF content itself.
 - Totals inputs: `getByLabel('DTS USD total for LODGING')`,
   `getByLabel('DTS USD reimbursement for GTCC')` (also `Personal`).
 - Recon row state: `page.$$eval('.recon__row', els => els.map(el =>
@@ -129,9 +147,11 @@ or you'll be hunting a button that was never mounted. It goes through
 Read it back with `JSZip.loadAsync(buf)` (a project dependency) and check
 `Object.values(zip.files).filter(f => !f.dir).map(f => f.name)` — note JSZip
 also emits an implicit `receipts/` directory entry. The numbers in
-`receipts/receipt-NN.jpg` must line up with the `Receipt #` column (index 9,
+`receipts/receipt-NN.<ext>` must line up with the `Receipt #` column (index 9,
 0-based) of the `.xlsx`'s Expenses sheet; that pairing is the whole point of
-the feature, so assert it rather than eyeballing the file list.
+the feature, so assert it rather than eyeballing the file list. The extension
+is `.jpg` for a photo attachment or `.pdf` for a PDF one — check it matches
+what was actually attached to that row, not just `.jpg` unconditionally.
 
 ## Backup / restore
 

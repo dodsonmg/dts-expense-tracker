@@ -128,8 +128,8 @@ export async function buildXlsx(
     { header: 'Entered in DTS', width: 14 },
     { header: 'Miles', width: 9 },
     { header: 'Rate', width: 9 },
-    // Matches receipts/receipt-NN.jpg in the .zip export, so each line can be
-    // keyed into DTS with its evidence attached.
+    // Matches receipts/receipt-NN.jpg (or .pdf) in the .zip export, so each
+    // line can be keyed into DTS with its evidence attached.
     { header: 'Receipt #', width: 10 },
     { header: 'Note', width: 28 },
   ];

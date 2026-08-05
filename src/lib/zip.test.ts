@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
 import { buildReceiptZip, receiptFilename, zipFilename } from './zip';
 
-const blob = (text: string) => new Blob([text], { type: 'image/jpeg' });
+const blob = (text: string, type = 'image/jpeg') => new Blob([text], { type });
 const xlsxBuf = () => new TextEncoder().encode('fake xlsx bytes').buffer;
 
 describe('zipFilename', () => {
@@ -15,14 +15,20 @@ describe('zipFilename', () => {
 
 describe('receiptFilename', () => {
   it('pads to at least two digits', () => {
-    expect(receiptFilename(1, 3)).toBe('receipts/receipt-01.jpg');
-    expect(receiptFilename(9, 9)).toBe('receipts/receipt-09.jpg');
+    expect(receiptFilename(1, 3, 'image/jpeg')).toBe('receipts/receipt-01.jpg');
+    expect(receiptFilename(9, 9, 'image/jpeg')).toBe('receipts/receipt-09.jpg');
   });
 
   it('widens padding so names sort naturally past 99', () => {
     // Without this, receipt-10 would sort before receipt-9 in Finder.
-    expect(receiptFilename(9, 100)).toBe('receipts/receipt-009.jpg');
-    expect(receiptFilename(100, 100)).toBe('receipts/receipt-100.jpg');
+    expect(receiptFilename(9, 100, 'image/jpeg')).toBe('receipts/receipt-009.jpg');
+    expect(receiptFilename(100, 100, 'image/jpeg')).toBe('receipts/receipt-100.jpg');
+  });
+
+  it('uses a .pdf extension for a PDF attachment', () => {
+    expect(receiptFilename(1, 3, 'application/pdf')).toBe(
+      'receipts/receipt-01.pdf',
+    );
   });
 });
 
@@ -68,5 +74,23 @@ describe('buildReceiptZip', () => {
     const zip = await buildReceiptZip(xlsxBuf(), 'x.xlsx', []);
     const read = await JSZip.loadAsync(await zip.arrayBuffer());
     expect(Object.keys(read.files)).toEqual(['x.xlsx']);
+  });
+
+  it('names a PDF attachment with a .pdf extension, alongside a JPEG', async () => {
+    const zip = await buildReceiptZip(xlsxBuf(), 'x.xlsx', [
+      { receiptNo: 1, blob: blob('img', 'image/jpeg') },
+      { receiptNo: 2, blob: blob('doc', 'application/pdf') },
+    ]);
+
+    const read = await JSZip.loadAsync(await zip.arrayBuffer());
+    expect(
+      Object.values(read.files)
+        .filter((f) => !f.dir)
+        .map((f) => f.name)
+        .sort(),
+    ).toEqual(['receipts/receipt-01.jpg', 'receipts/receipt-02.pdf', 'x.xlsx']);
+    expect(await read.file('receipts/receipt-02.pdf')!.async('string')).toBe(
+      'doc',
+    );
   });
 });

@@ -69,16 +69,16 @@ const FAQS: { q: string; a: string | string[] }[] = [
     a: 'A formatted .xlsx (mismatch rows red, USD-incomplete rows yellow, reconciliation tables up top) and a plain CSV with the same numbers as a fallback. Both are meant to work as a standalone spreadsheet at the office, where phones aren’t allowed.',
   },
   {
-    q: 'Can I attach a photo of a receipt?',
-    a: 'Yes — one photo per expense, either as you add it on Entry or later by tapping the expense on List. Photos are shrunk before they’re saved so a trip’s worth of receipts doesn’t fill up your phone. Rows that have one show a small marker on List; tap it to view the photo full-screen.',
+    q: 'Can I attach a photo of a receipt? What about a PDF?',
+    a: 'Yes — one photo or PDF per expense, either as you add it on Entry or later by tapping the expense on List. Photos are shrunk before they’re saved so a trip’s worth of receipts doesn’t fill up your phone; PDFs (hotel folios, e-ticket confirmations) are stored as-is, capped at 10 MB. Rows that have one show a small marker on List; tap it to view full-screen.',
   },
   {
-    q: 'Are receipt photos included in the backup file?',
-    a: 'No — this is the one thing a backup doesn’t cover. The backup is a text file of your expenses, and photos would make it enormous, so they stay on this device only. If you restore onto a new phone you’ll get every expense back, but not the photos. Keep anything you can’t afford to lose in your normal photo library too.',
+    q: 'Are receipt photos and PDFs included in the backup file?',
+    a: 'No — this is the one thing a backup doesn’t cover. The backup is a text file of your expenses, and attachments would make it enormous, so they stay on this device only. If you restore onto a new phone you’ll get every expense back, but not the photos/PDFs. Keep anything you can’t afford to lose in your normal photo library too.',
   },
   {
     q: 'How do I get my receipts to the office for DTS?',
-    a: 'Use "Export & share receipts (.zip)" on the Export tab. The zip holds the same formatted .xlsx plus one image per receipt, named receipt-01.jpg, receipt-02.jpg and so on. Those numbers match the spreadsheet’s "Receipt #" column, so as you key each line into DTS you can attach the correspondingly numbered photo as evidence. The button only appears once at least one expense has a photo.',
+    a: 'Use "Export & share receipts (.zip)" on the Export tab. The zip holds the same formatted .xlsx plus one file per receipt, named to match its kind — receipt-01.jpg for a photo, receipt-01.pdf for a PDF, and so on. Those numbers match the spreadsheet’s "Receipt #" column, so as you key each line into DTS you can attach the correspondingly numbered file as evidence. The button only appears once at least one expense has an attachment.',
   },
   {
     q: 'Does any of my data leave my phone?',
