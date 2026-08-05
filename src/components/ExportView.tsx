@@ -86,8 +86,9 @@ export function ExportView({
     };
   }
 
-  // The spreadsheet plus the photos it references. Both come from the same
-  // buildReport model, so the Receipt # column and receipt-NN.jpg always agree.
+  // The spreadsheet plus the receipts it references. Both come from the same
+  // buildReport model, so the Receipt # column and receipt-NN.jpg/.pdf always
+  // agree.
   async function makeZip(): Promise<{ blob: Blob; name: string }> {
     const buf = await buildXlsx(expenses, segments, expected, accountExpected);
     const report = buildReport(expenses, segments, expected, accountExpected);
@@ -226,11 +227,11 @@ export function ExportView({
             ⇪ Export &amp; share receipts (.zip)
           </button>
           <p className="muted small">
-            The .xlsx plus {photoCount} receipt photo
+            The .xlsx plus {photoCount} receipt
             {photoCount === 1 ? '' : 's'}, numbered to match the sheet&apos;s{' '}
-            <strong>Receipt #</strong> column — attach{' '}
-            <code>receipt-01.jpg</code> to the line numbered 1 as you key it
-            into DTS.
+            <strong>Receipt #</strong> column — attach the file numbered 1 (
+            <code>receipt-01.jpg</code> or <code>receipt-01.pdf</code>) to the
+            line numbered 1 as you key it into DTS.
           </p>
         </>
       )}

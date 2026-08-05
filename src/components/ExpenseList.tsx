@@ -40,18 +40,20 @@ export function ExpenseList({
   const [pendingOnly, setPendingOnly] = useState(false);
   const [outstandingOnly, setOutstandingOnly] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [viewing, setViewing] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<{ url: string; type: string } | null>(
+    null,
+  );
 
   // Fetched only when a photo badge is tapped — rendering the list itself must
   // never decode every attached photo.
   async function openPhoto(photoId: string) {
     const blob = await onLoadPhoto(photoId);
-    if (blob) setViewing(URL.createObjectURL(blob));
+    if (blob) setViewing({ url: URL.createObjectURL(blob), type: blob.type });
   }
 
   function closePhoto() {
-    setViewing((url) => {
-      if (url) URL.revokeObjectURL(url);
+    setViewing((v) => {
+      if (v) URL.revokeObjectURL(v.url);
       return null;
     });
   }
@@ -191,7 +193,9 @@ export function ExpenseList({
         </ul>
       )}
 
-      {viewing && <PhotoLightbox url={viewing} onClose={closePhoto} />}
+      {viewing && (
+        <PhotoLightbox url={viewing.url} type={viewing.type} onClose={closePhoto} />
+      )}
     </div>
   );
 }
@@ -237,6 +241,7 @@ function EditRow({
     { blob: Blob; url: string } | null | undefined
   >(undefined);
   const [existingUrl, setExistingUrl] = useState<string | null>(null);
+  const [existingType, setExistingType] = useState<string | null>(null);
   const photoId = expense.photoIds[0] as string | undefined;
 
   // Only one row is open for editing at a time, so eagerly loading its photo
@@ -249,6 +254,7 @@ function EditRow({
       if (!alive || !blob) return;
       url = URL.createObjectURL(blob);
       setExistingUrl(url);
+      setExistingType(blob.type);
     });
     return () => {
       alive = false;
@@ -261,8 +267,14 @@ function EditRow({
     return () => URL.revokeObjectURL(pendingPhoto.url);
   }, [pendingPhoto]);
 
-  const previewUrl =
-    pendingPhoto === undefined ? existingUrl : (pendingPhoto?.url ?? null);
+  const preview =
+    pendingPhoto === undefined
+      ? existingUrl
+        ? { url: existingUrl, type: existingType ?? '' }
+        : null
+      : pendingPhoto
+        ? { url: pendingPhoto.url, type: pendingPhoto.blob.type }
+        : null;
 
   function commitPhoto() {
     if (pendingPhoto === undefined) return;
@@ -412,7 +424,7 @@ function EditRow({
 
       <PhotoField
         idPrefix={`edit-${expense.id}`}
-        previewUrl={previewUrl}
+        preview={preview}
         onSelect={(blob) =>
           setPendingPhoto({ blob, url: URL.createObjectURL(blob) })
         }

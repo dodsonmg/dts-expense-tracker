@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntryForm } from './EntryForm';
 import { FOREIGN_SYMBOL } from '../lib/format';
+import { prepareAttachment, AttachmentTooLargeError } from '../lib/photo';
 
 const foreignLabel = new RegExp(FOREIGN_SYMBOL);
 
@@ -178,9 +179,13 @@ describe('EntryForm — LODGING tax reminder', () => {
 // compressImage draws to a canvas, which jsdom does not implement — mocked so
 // these tests cover the wiring (pick -> preview -> attach with the right id)
 // rather than the encoding, which is verified in a real browser.
-vi.mock('../lib/photo', () => ({
-  compressImage: vi.fn(async (blob: Blob) => blob),
-}));
+vi.mock('../lib/photo', async () => {
+  const actual = await vi.importActual<typeof import('../lib/photo')>('../lib/photo');
+  return {
+    ...actual,
+    prepareAttachment: vi.fn(async (blob: Blob) => blob),
+  };
+});
 
 describe('EntryForm — receipt photo', () => {
   const pickFile = () =>
@@ -268,13 +273,59 @@ describe('EntryForm — receipt photo', () => {
     expect(onAttachPhoto).not.toHaveBeenCalled();
   });
 
-  it('offers the photo library as well as the camera', () => {
+  it('offers the photo library and PDFs, as well as the camera', () => {
     render(<EntryForm onAttachPhoto={vi.fn()} onAdd={vi.fn()} onDone={vi.fn()} />);
 
     const input = screen.getByTestId('entry-photo-input');
-    expect(input).toHaveAttribute('accept', 'image/*');
+    expect(input).toHaveAttribute('accept', 'image/*,application/pdf');
     // No `capture` attribute: it would force the camera and block attaching a
     // receipt photographed earlier.
     expect(input).not.toHaveAttribute('capture');
+  });
+
+  it('attaches a picked PDF, showing a file chip instead of a thumbnail', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn().mockReturnValue('new-id');
+    const onAttachPhoto = vi.fn();
+    render(
+      <EntryForm onAttachPhoto={onAttachPhoto} onAdd={onAdd} onDone={vi.fn()} />,
+    );
+
+    const pdfFile = new File(['%PDF-1.4 fake'], 'receipt.pdf', {
+      type: 'application/pdf',
+    });
+    await user.upload(screen.getByTestId('entry-photo-input'), pdfFile);
+    await screen.findByText(/attached receipt: pdf/i);
+    expect(screen.queryByAltText('Attached receipt')).toBeNull();
+
+    await user.type(screen.getByLabelText(/USD/i), '20');
+    await user.click(screen.getByRole('button', { name: /save & add another/i }));
+
+    expect(onAttachPhoto).toHaveBeenCalledWith('new-id', expect.any(Blob));
+  });
+
+  it('shows an error and does not attach when the PDF is over the size cap', async () => {
+    const user = userEvent.setup();
+    vi.mocked(prepareAttachment).mockRejectedValueOnce(
+      new AttachmentTooLargeError(),
+    );
+    const onAttachPhoto = vi.fn();
+    render(
+      <EntryForm
+        onAttachPhoto={onAttachPhoto}
+        onAdd={vi.fn().mockReturnValue('new-id')}
+        onDone={vi.fn()}
+      />,
+    );
+
+    const pdfFile = new File(['big'], 'receipt.pdf', { type: 'application/pdf' });
+    await user.upload(screen.getByTestId('entry-photo-input'), pdfFile);
+
+    await screen.findByText(/larger than 10 mb/i);
+    expect(screen.queryByText(/attached receipt: pdf/i)).toBeNull();
+
+    await user.type(screen.getByLabelText(/USD/i), '20');
+    await user.click(screen.getByRole('button', { name: /save & add another/i }));
+    expect(onAttachPhoto).not.toHaveBeenCalled();
   });
 });

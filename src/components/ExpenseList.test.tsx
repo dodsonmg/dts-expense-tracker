@@ -319,9 +319,13 @@ describe('ExpenseList — MILEAGE calculator', () => {
   });
 });
 
-vi.mock('../lib/photo', () => ({
-  compressImage: vi.fn(async (blob: Blob) => blob),
-}));
+vi.mock('../lib/photo', async () => {
+  const actual = await vi.importActual<typeof import('../lib/photo')>('../lib/photo');
+  return {
+    ...actual,
+    prepareAttachment: vi.fn(async (blob: Blob) => blob),
+  };
+});
 
 describe('ExpenseList — receipt photos', () => {
   const pickFile = () =>
@@ -469,5 +473,74 @@ describe('ExpenseList — receipt photos', () => {
 
     await user.click(screen.getByRole('button', { name: /^save$/i }));
     expect(onRemovePhoto).toHaveBeenCalledWith('a');
+  });
+
+  it('opens a PDF attachment in the lightbox as an <embed>, not an <img>', async () => {
+    const user = userEvent.setup();
+    const onLoadPhoto = vi
+      .fn()
+      .mockResolvedValue(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+    render(
+      <ExpenseList
+        {...photoProps}
+        onLoadPhoto={onLoadPhoto}
+        expenses={[exp({ id: 'a', photoIds: ['p1'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /view receipt photo/i }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(
+      document.querySelector('embed[type="application/pdf"]'),
+    ).not.toBeNull();
+  });
+
+  it('EditRow shows a file chip, not an <img>, for an existing PDF attachment', async () => {
+    const user = userEvent.setup();
+    const onLoadPhoto = vi
+      .fn()
+      .mockResolvedValue(new Blob(['%PDF-1.4'], { type: 'application/pdf' }));
+    render(
+      <ExpenseList
+        {...photoProps}
+        onLoadPhoto={onLoadPhoto}
+        expenses={[exp({ id: 'a', photoIds: ['p1'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('LODGING'));
+    await screen.findByText(/attached receipt: pdf/i);
+    expect(screen.queryByAltText('Attached receipt')).toBeNull();
+  });
+
+  it('EditRow attaches a picked PDF on Save', async () => {
+    const user = userEvent.setup();
+    const onAttachPhoto = vi.fn();
+    render(
+      <ExpenseList
+        {...photoProps}
+        onAttachPhoto={onAttachPhoto}
+        expenses={[exp({ id: 'a' })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const pdfFile = new File(['%PDF-1.4 fake'], 'receipt.pdf', {
+      type: 'application/pdf',
+    });
+    await user.click(screen.getByText('LODGING'));
+    await user.upload(screen.getByTestId('edit-a-photo-input'), pdfFile);
+    await screen.findByText(/attached receipt: pdf/i);
+
+    expect(onAttachPhoto).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob));
   });
 });

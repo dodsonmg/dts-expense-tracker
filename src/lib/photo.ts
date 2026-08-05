@@ -19,6 +19,28 @@ export const DEFAULT_QUALITY = 0.72;
 
 export const PHOTO_MIME = 'image/jpeg';
 
+export const PDF_MIME = 'application/pdf';
+
+// 10 MB: photos self-limit via compression's downscale; a PDF isn't
+// re-encoded, so it needs an explicit cap instead.
+export const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
+// Single source of truth for the file input's `accept` and the branch below,
+// so the picker and the validator can't drift apart.
+export const ATTACHMENT_ACCEPT = 'image/*,application/pdf';
+
+export function isPdf(file: Blob): boolean {
+  return file.type === PDF_MIME;
+}
+
+export function isImageAttachment(type: string): boolean {
+  return type.startsWith('image/');
+}
+
+// Thrown by prepareAttachment when a PDF exceeds MAX_PDF_BYTES, so callers
+// can show a specific message instead of the generic read-failure one.
+export class AttachmentTooLargeError extends Error {}
+
 // Scales the longest edge down to `maxDimension`, preserving aspect ratio.
 // Never scales up — a photo already smaller than the target is left alone.
 export function targetDimensions(
@@ -72,4 +94,19 @@ export async function compressImage(
   } finally {
     bitmap.close();
   }
+}
+
+// Single entry point PhotoField calls instead of compressImage directly: a
+// PDF can't go through createImageBitmap at all, and there's no legible-
+// downscale equivalent for one, so it's stored as-is (size-capped) rather
+// than re-encoded.
+export async function prepareAttachment(
+  file: Blob,
+  opts: CompressOptions = {},
+): Promise<Blob> {
+  if (isPdf(file)) {
+    if (file.size > MAX_PDF_BYTES) throw new AttachmentTooLargeError();
+    return file;
+  }
+  return compressImage(file, opts);
 }

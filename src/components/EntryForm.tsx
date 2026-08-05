@@ -229,7 +229,7 @@ export function EntryForm({ onAdd, onAttachPhoto, onDone }: Props) {
 
       <PhotoField
         idPrefix="entry"
-        previewUrl={photo?.url ?? null}
+        preview={photo ? { url: photo.url, type: photo.blob.type } : null}
         onSelect={(blob) =>
           setPhoto({ blob, url: URL.createObjectURL(blob) })
         }

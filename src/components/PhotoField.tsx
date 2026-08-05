@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { compressImage } from '../lib/photo';
+import {
+  prepareAttachment,
+  isImageAttachment,
+  ATTACHMENT_ACCEPT,
+  AttachmentTooLargeError,
+} from '../lib/photo';
+
+interface Preview {
+  // Object URL of the currently attached receipt.
+  url: string;
+  // The blob's MIME type — picks the <img> vs. file-chip rendering below.
+  type: string;
+}
 
 interface Props {
-  // Object URL of the currently attached photo, or null if there is none.
   // Owned by the caller, since where the blob lives differs: EntryForm holds
   // one pending in local state, EditRow reads a persisted one back from
   // storage.
-  previewUrl: string | null;
+  preview: Preview | null;
   onSelect: (blob: Blob) => void;
   onRemove: () => void;
   // Distinguishes the file inputs when both forms are on screen, and gives
@@ -14,14 +25,15 @@ interface Props {
   idPrefix: string;
 }
 
-// The receipt photo picker shared by EntryForm and EditRow. Compression
-// happens here so neither caller has to think about it.
+// The receipt attachment picker shared by EntryForm and EditRow. Photo
+// compression / PDF size-checking happens here so neither caller has to
+// think about it.
 //
-// Deliberately no `capture` attribute on the input: with plain accept="image/*"
-// iOS offers its native sheet with both Take Photo and Photo Library, whereas
-// `capture` forces the camera and blocks attaching a receipt photographed
-// earlier.
-export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) {
+// Deliberately no `capture` attribute on the input: with plain
+// accept="image/*,application/pdf" iOS offers its native sheet with both
+// Take Photo and Photo Library (plus Files for a PDF), whereas `capture`
+// forces the camera and blocks attaching a receipt photographed earlier.
+export function PhotoField({ preview, onSelect, onRemove, idPrefix }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +50,16 @@ export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) 
     setError(null);
     setBusy(true);
     try {
-      const blob = await compressImage(file);
+      const blob = await prepareAttachment(file);
       if (alive.current) onSelect(blob);
-    } catch {
-      if (alive.current) setError('Could not read that image.');
+    } catch (err) {
+      if (alive.current) {
+        setError(
+          err instanceof AttachmentTooLargeError
+            ? 'That PDF is larger than 10 MB — pick a smaller file.'
+            : 'Could not read that file.',
+        );
+      }
     } finally {
       if (alive.current) setBusy(false);
       // Clear so picking the same file twice in a row still fires onChange.
@@ -53,12 +71,19 @@ export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) 
     <div className="field">
       <span>Receipt photo</span>
 
-      {previewUrl && (
-        <img
-          className="photo-thumb"
-          src={previewUrl}
-          alt="Attached receipt"
-        />
+      {preview && (
+        isImageAttachment(preview.type) ? (
+          <img
+            className="photo-thumb"
+            src={preview.url}
+            alt="Attached receipt"
+          />
+        ) : (
+          <div className="photo-thumb photo-thumb--file">
+            <span aria-hidden>📄</span>
+            <span>Attached receipt: PDF</span>
+          </div>
+        )
       )}
 
       <div className="photo-actions">
@@ -68,9 +93,9 @@ export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) 
           disabled={busy}
           onClick={() => inputRef.current?.click()}
         >
-          {previewUrl ? 'Replace photo' : 'Add photo'}
+          {preview ? 'Replace photo' : 'Add photo'}
         </button>
-        {previewUrl && (
+        {preview && (
           <button
             type="button"
             className="btn btn--small"
@@ -87,7 +112,7 @@ export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) 
         id={`${idPrefix}-photo`}
         data-testid={`${idPrefix}-photo-input`}
         type="file"
-        accept="image/*"
+        accept={ATTACHMENT_ACCEPT}
         className="visually-hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -97,10 +122,10 @@ export function PhotoField({ previewUrl, onSelect, onRemove, idPrefix }: Props) 
 
       {busy && <p className="muted small">Processing photo…</p>}
       {error && <p className="muted small">{error}</p>}
-      {!previewUrl && !busy && !error && (
+      {!preview && !busy && !error && (
         <p className="muted small">
-          Optional. Stays on this device — photos aren&apos;t in the backup
-          file, but they do go in the receipts .zip export.
+          Optional. Stays on this device — photos and PDFs aren&apos;t in the
+          backup file, but they do go in the receipts .zip export.
         </p>
       )}
     </div>

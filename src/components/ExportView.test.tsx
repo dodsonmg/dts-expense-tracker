@@ -248,7 +248,7 @@ describe('ExportView — receipts zip', () => {
       screen.getByRole('button', { name: /receipts \(\.zip\)/i }),
     ).toBeEnabled();
     // Singular: only one of the two expenses has a photo.
-    expect(screen.getByText(/1 receipt photo\b/)).toBeInTheDocument();
+    expect(screen.getByText(/1 receipt,/)).toBeInTheDocument();
     expect(screen.getByText(/Receipt #/)).toBeInTheDocument();
   });
 

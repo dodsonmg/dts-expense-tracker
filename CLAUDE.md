@@ -89,10 +89,10 @@ npm test           # vitest run
   - `report.ts` — one structured export model consumed by both exporters, so
     CSV and XLSX never drift.
   - `csv.ts` — CSV export document.
-  - `zip.ts` — the receipts bundle (`.xlsx` + numbered photo files) for the
-    office's DTS evidence step. Pure: blobs are passed in already fetched, it
-    never touches IndexedDB. JSZip is dynamically imported (same convention as
-    ExcelJS).
+  - `zip.ts` — the receipts bundle (`.xlsx` + numbered receipt files, `.jpg`
+    or `.pdf` per attachment) for the office's DTS evidence step. Pure: blobs
+    are passed in already fetched, it never touches IndexedDB. JSZip is
+    dynamically imported (same convention as ExcelJS).
   - `xlsx.ts` — formatted `.xlsx` (ExcelJS, dynamically imported to stay out of
     the main bundle).
   - `backup.ts` — whole-**device** JSON backup/restore (`BACKUP_VERSION = 2`):
@@ -104,13 +104,18 @@ npm test           # vitest run
     trip's data.
   - `format.ts` — currency + date helpers, plus `slugify` (trip name → safe
     filename fragment, used by `csv.ts`/`xlsx.ts`'s filename generators).
-  - `photo.ts` — receipt-photo downscale/re-encode before storage
-    (`compressImage`, plus the pure `targetDimensions`). Uses
+  - `photo.ts` — receipt attachment prep before storage. `compressImage`
+    downscales/re-encodes an image (plus the pure `targetDimensions`), using
     `createImageBitmap(..., { imageOrientation: 'from-image' })` so an
-    iPhone's EXIF rotation is applied rather than baked in sideways. Only
-    `targetDimensions` is unit-testable — jsdom has no `<canvas>`, so the
-    draw/encode path needs `verifier-gui` or a device; component tests
-    `vi.mock` this module rather than faking a canvas.
+    iPhone's EXIF rotation is applied rather than baked in sideways. A PDF
+    can't go through that path (`createImageBitmap` rejects non-image
+    input) and has no legible-downscale equivalent, so `prepareAttachment` —
+    the entry point `PhotoField` calls — stores a PDF as-is, gated only by a
+    `MAX_PDF_BYTES` (10 MB) size cap (`AttachmentTooLargeError` if over).
+    Only `targetDimensions` and `prepareAttachment`'s PDF branch are
+    unit-testable — jsdom has no `<canvas>`, so `compressImage`'s draw/encode
+    path needs `verifier-gui` or a device; component tests `vi.mock` this
+    module rather than faking a canvas.
   - `pwaRegister.ts` — re-exports `useRegisterSW` from
     `virtual:pwa-register/react`. Exists purely so tests can `vi.mock` a real
     file path; the virtual specifier itself can't be resolved under
@@ -122,9 +127,12 @@ npm test           # vitest run
   `TripSwitcher` (mounted in the header, not a tab — reachable from every
   screen; also the archive/unarchive control, with a "Show archived" toggle
   for its default-hidden rows), `UpdateToast`, `BackupNudgeToast`, plus
-  `PhotoField` (the receipt-photo picker shared by `EntryForm` and `EditRow` —
-  owns compression and the thumbnail; the caller owns where the blob goes) and
-  `PhotoLightbox` (full-screen view, opened from a list row's photo badge).
+  `PhotoField` (the receipt attachment picker shared by `EntryForm` and
+  `EditRow` — owns compression/size-checking and the preview, rendering an
+  `<img>` thumbnail for a photo or a filename+icon chip for a PDF; the caller
+  owns where the blob goes) and `PhotoLightbox` (full-screen view, opened
+  from a list row's photo badge — an `<img>` for a photo, a native `<embed>`
+  for a PDF).
   `App.tsx` is the tab shell; it also mounts `UpdateToast` and
   `BackupNudgeToast` (see below).
 
@@ -214,7 +222,12 @@ thinking the field is pounds-only. See `HelpView`'s "What does £€¥ mean?" FA
     of trusting the parsed JSON shape.
 13. **Receipt photos are device-local and never in a backup** — the one
     per-trip field invariant 10's "restore replaces everything" promise does
-    *not* cover. `Expense.photoIds` holds ids; the bytes live under their own
+    *not* cover. Despite the name, an "attachment" here can be a photo or a
+    PDF (issue #39) — the storage layer (`db.ts`'s `savePhoto`/`loadPhoto`)
+    is MIME-agnostic and keeps the `photo`-prefixed naming regardless of
+    kind; only `lib/photo.ts` (compress vs. size-cap-and-pass-through) and
+    the `PhotoField`/`PhotoLightbox` rendering branch on the blob's MIME
+    type. `Expense.photoIds` holds ids; the bytes live under their own
     `trip:<id>:photo:<photoId>` keys (`db.ts`), never inline in the expenses
     array, so editing any other field doesn't re-serialize photo data (
     `saveExpenses` writes the whole array at once) and vice versa. Backups
@@ -257,17 +270,20 @@ where phones are banned).
 
 A third export bundles the two together for the office's evidence step
 (`lib/zip.ts`, `buildReceiptZip`): the same `.xlsx` at the zip root plus
-`receipts/receipt-NN.jpg` per attached photo, where `NN` is the
-`ReportExpenseRow.receiptNo` printed in the sheet's `Receipt #` column — key
-row N into DTS, attach `receipt-N.jpg`. `receiptNo` is assigned in
-`buildReport` (sequential across photo-bearing rows, `null` otherwise) so the
-sheet and the filenames can't disagree, and is **recomputed per export, never
+`receipts/receipt-NN.jpg` (or `.pdf`, for a PDF attachment) per attached
+receipt, where `NN` is the `ReportExpenseRow.receiptNo` printed in the
+sheet's `Receipt #` column — key row N into DTS, attach `receipt-N.jpg`/
+`.pdf`. The extension is derived from the blob's MIME type at zip-build time
+(`receiptFilename`), never stored. `receiptNo` is assigned in `buildReport`
+(sequential across attachment-bearing rows, `null` otherwise) so the sheet
+and the filenames can't disagree, and is **recomputed per export, never
 persisted** — a bundle is internally consistent even though numbering shifts
 between exports. Names are zero-padded to the widest number so they sort
 naturally in Finder. JSZip is dynamically imported like ExcelJS, and the
-archive uses `STORE` (xlsx and jpg are already compressed). `ExportView` hides
-the button entirely unless some expense has a photo, and a photo whose blob has
-gone missing is skipped rather than failing the export.
+archive uses `STORE` (xlsx and a receipt file, JPEG or PDF, are already
+compressed). `ExportView` hides the button entirely unless some expense has
+an attachment, and an attachment whose blob has gone missing is skipped
+rather than failing the export.
 
 ## PWA behavior
 
@@ -310,8 +326,9 @@ MVP (this scaffold) is Phase 1. Phases 2–3 in `SPEC.md` are done: DTS
 reconciliation (check-off, mismatch flags, `.xlsx` export), multi-trip +
 backup/restore + MILEAGE calculator + PWA install/offline polish (icon,
 update toast, Help/FAQ tab). Phase 4's **receipt photos** (item 12, invariant
-13) are done: one photo per expense, compressed on capture, device-local, with
-the numbered `.zip` bundle for the office. Phase 4's other half — **interactive
+13) are done: one photo or PDF per expense (photos compressed on capture,
+PDFs size-capped and stored as-is), device-local, with the numbered `.zip`
+bundle for the office. Phase 4's other half — **interactive
 laptop import** (item 13) — is not started; don't pull that work forward
 without being asked. Trip archiving + the backup nudge toast (Phase 5,
 invariant 12) were added beyond the original phased plan.
