@@ -203,11 +203,12 @@ Two tables, GBP and USD kept separate throughout:
     don't fill the phone; a PDF (hotel folio, e-ticket confirmation) can't go
     through that downscale path, so it's stored as-is instead, capped at
     10 MB. Both are stored as their own `trip:<id>:photo:<photoId>` IndexedDB
-    values rather than inline in the expenses array. **Device-local:
-    attachments are the one thing the whole-device backup does not carry**
-    (see CLAUDE.md invariant 13) — the file is text, and embedding them would
-    make it enormous, so `photoIds` is zeroed both when a backup is built and
-    when one is parsed, and a restore can never produce a dangling reference.
+    values rather than inline in the expenses array. **By explicit user
+    preference, attachments are intentionally excluded from whole-device
+    backups** (see CLAUDE.md invariant 13). `photoIds` is zeroed both when a
+    backup is built and when one is parsed, so a restore can never produce a
+    dangling reference. Do not include attachments in backups unless the user
+    changes this requirement.
     Instead they reach the office via the **receipts `.zip`** export: the
     same formatted `.xlsx` plus `receipts/receipt-NN.jpg` (or `.pdf`) for the
     first attachment and `receipt-NN-2.jpg` (or `.pdf`) for the second,

@@ -8,10 +8,16 @@ import { buildReport } from './report';
 import type { MatchStatus } from './reconcile';
 import { slugify } from './format';
 
-// Hand-rolled CSV (no dependency, per SPEC.md). Excel/Sheets-safe escaping.
+// Hand-rolled CSV (no dependency, per SPEC.md). Escapes CSV syntax and keeps
+// user-provided text from being interpreted as a spreadsheet formula.
 function cell(value: string | number | null): string {
   if (value == null) return '';
-  const s = String(value);
+  let s = String(value);
+  const formulaLike = /^[\s\p{Cc}]*[=+\-@]/u.test(s);
+  const numeric = /^-?\d+(?:\.\d+)?$/.test(s);
+  if (typeof value === 'string' && formulaLike && !numeric) {
+    s = `'${s}`;
+  }
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
