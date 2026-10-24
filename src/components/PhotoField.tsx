@@ -47,6 +47,8 @@ export function PhotoField({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
+  const canPasteImage =
+    typeof navigator !== 'undefined' && typeof navigator.clipboard?.read === 'function';
 
   useEffect(() => {
     alive.current = true;
@@ -56,6 +58,10 @@ export function PhotoField({
   }, []);
 
   async function handleFile(file: File) {
+    await handleAttachment(file);
+  }
+
+  async function handleAttachment(file: Blob) {
     setError(null);
     setBusy(true);
     try {
@@ -73,6 +79,42 @@ export function PhotoField({
       if (alive.current) setBusy(false);
       // Clear so picking the same file twice in a row still fires onChange.
       if (inputRef.current) inputRef.current.value = '';
+    }
+  }
+
+  async function handlePaste() {
+    setError(null);
+    setBusy(true);
+    try {
+      const items = await navigator.clipboard.read();
+      let image: Blob | null = null;
+      for (const item of items) {
+        const imageType = item.types.find((type) => type.startsWith('image/'));
+        if (imageType) {
+          image = await item.getType(imageType);
+          break;
+        }
+      }
+
+      if (!image) {
+        if (alive.current) {
+          setError('No image found. Copy a screenshot or image, then try again.');
+        }
+        return;
+      }
+
+      const blob = await prepareAttachment(image);
+      if (alive.current) onSelect(blob);
+    } catch (err) {
+      if (alive.current) {
+        setError(
+          err instanceof DOMException && err.name === 'NotAllowedError'
+            ? 'Clipboard access was denied. Allow Paste access and try again.'
+            : 'Could not paste from the clipboard.',
+        );
+      }
+    } finally {
+      if (alive.current) setBusy(false);
     }
   }
 
@@ -110,6 +152,16 @@ export function PhotoField({
               ? 'Add photo'
               : 'Add second attachment'}
         </button>
+        {canPasteImage && (
+          <button
+            type="button"
+            className="btn btn--small"
+            disabled={busy || disabled}
+            onClick={() => void handlePaste()}
+          >
+            Paste screenshot
+          </button>
+        )}
         {preview && (
           <button
             type="button"
