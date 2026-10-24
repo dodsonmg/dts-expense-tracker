@@ -275,6 +275,24 @@ describe('ExportView — receipts zip', () => {
     expect(onLoadPhoto).toHaveBeenCalledWith('p2');
   });
 
+  it('includes both attachments belonging to the same expense in the ZIP', async () => {
+    const onLoadPhoto = vi.fn().mockResolvedValue(
+      new Blob(['attachment'], { type: 'image/jpeg' }),
+    );
+    render(
+      <ExportView
+        {...base}
+        expenses={[exp({ id: 'a', photoIds: ['p1', 'p2'] })]}
+        onLoadPhoto={onLoadPhoto}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /receipts \(\.zip\)/i }));
+    await waitFor(() => expect(onLoadPhoto).toHaveBeenCalledTimes(2));
+    expect(onLoadPhoto).toHaveBeenNthCalledWith(1, 'p1');
+    expect(onLoadPhoto).toHaveBeenNthCalledWith(2, 'p2');
+  });
+
   it('still exports when a photo blob has gone missing', async () => {
     // A dangling reference shouldn't sink the whole export — the sheet still
     // has the row, it just won't have evidence attached.

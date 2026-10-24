@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  hasPhoto,
   ITEMIZED_CATEGORIES,
   isEntered,
   isUsdPending,
@@ -17,8 +16,8 @@ interface Props {
   expenses: Expense[];
   onUpdate: (id: string, patch: Partial<Expense>) => void;
   onDelete: (id: string) => void;
-  onAttachPhoto: (expenseId: string, blob: Blob) => void;
-  onRemovePhoto: (expenseId: string) => void;
+  onAttachPhoto: (expenseId: string, blob: Blob, slot: number) => void;
+  onRemovePhoto: (expenseId: string, slot: number) => void;
   onLoadPhoto: (photoId: string) => Promise<Blob | null>;
 }
 
@@ -119,8 +118,8 @@ export function ExpenseList({
                   onDelete(e.id);
                   setEditing(null);
                 }}
-                onAttachPhoto={(blob) => onAttachPhoto(e.id, blob)}
-                onRemovePhoto={() => onRemovePhoto(e.id)}
+                onAttachPhoto={(blob, slot) => onAttachPhoto(e.id, blob, slot)}
+                onRemovePhoto={(slot) => onRemovePhoto(e.id, slot)}
                 onLoadPhoto={onLoadPhoto}
               />
             ) : (
@@ -153,20 +152,21 @@ export function ExpenseList({
                   <div className="row__main">
                     <span className="row__cat">{e.category}</span>
                     {e.note && <span className="row__note">{e.note}</span>}
-                    {hasPhoto(e) && (
+                    {e.photoIds.map((photoId, slot) => photoId ? (
                       <button
+                        key={slot}
                         type="button"
                         className="row__photo"
-                        aria-label={`View receipt photo for ${e.category}`}
+                        aria-label={`View ${slot === 0 ? 'receipt photo' : 'second attachment'} for ${e.category}`}
                         // The row body opens the editor; the badge must not.
                         onClick={(ev) => {
                           ev.stopPropagation();
-                          void openPhoto(e.photoIds[0]);
+                          void openPhoto(photoId);
                         }}
                       >
                         <span aria-hidden>▣ Photo</span>
                       </button>
-                    )}
+                    ) : null)}
                   </div>
                   <div className="row__meta">
                     <span className="row__amounts">
@@ -205,8 +205,8 @@ interface EditProps {
   onSave: (patch: Partial<Expense>) => void;
   onCancel: () => void;
   onDelete: () => void;
-  onAttachPhoto: (blob: Blob) => void;
-  onRemovePhoto: () => void;
+  onAttachPhoto: (blob: Blob, slot: number) => void;
+  onRemovePhoto: (slot: number) => void;
   onLoadPhoto: (photoId: string) => Promise<Blob | null>;
 }
 
@@ -237,49 +237,55 @@ function EditRow({
   // Photo edits stage like every other field in this row — they commit on Save
   // and are discarded on Cancel. `undefined` = untouched, `null` = remove the
   // existing photo, a blob = attach or replace.
-  const [pendingPhoto, setPendingPhoto] = useState<
+  const [pendingPhotos, setPendingPhotos] = useState<(
     { blob: Blob; url: string } | null | undefined
-  >(undefined);
-  const [existingUrl, setExistingUrl] = useState<string | null>(null);
-  const [existingType, setExistingType] = useState<string | null>(null);
-  const photoId = expense.photoIds[0] as string | undefined;
+  )[]>([undefined, undefined]);
+  const [existingPreviews, setExistingPreviews] = useState<(
+    { url: string; type: string } | null
+  )[]>([null, null]);
+  const stagedUrls = useRef(new Set<string>());
+  const photoIds = expense.photoIds;
 
   // Only one row is open for editing at a time, so eagerly loading its photo
   // is cheap — unlike the collapsed rows, which just show a badge.
   useEffect(() => {
-    if (!photoId) return;
-    let url: string | null = null;
     let alive = true;
-    void onLoadPhoto(photoId).then((blob) => {
-      if (!alive || !blob) return;
-      url = URL.createObjectURL(blob);
-      setExistingUrl(url);
-      setExistingType(blob.type);
+    const urls: string[] = [];
+    void Promise.all(photoIds.map(async (photoId) => {
+      if (!photoId) return null;
+      const blob = await onLoadPhoto(photoId);
+      if (!alive || !blob) return null;
+      const url = URL.createObjectURL(blob);
+      urls.push(url);
+      return { url, type: blob.type };
+    })).then((previews) => {
+      if (alive) setExistingPreviews(previews);
     });
     return () => {
       alive = false;
-      if (url) URL.revokeObjectURL(url);
+      for (const url of urls) URL.revokeObjectURL(url);
     };
-  }, [photoId, onLoadPhoto]);
+  }, [photoIds, onLoadPhoto]);
 
   useEffect(() => {
-    if (!pendingPhoto) return;
-    return () => URL.revokeObjectURL(pendingPhoto.url);
-  }, [pendingPhoto]);
+    const urls = stagedUrls.current;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+    };
+  }, []);
 
-  const preview =
-    pendingPhoto === undefined
-      ? existingUrl
-        ? { url: existingUrl, type: existingType ?? '' }
-        : null
-      : pendingPhoto
-        ? { url: pendingPhoto.url, type: pendingPhoto.blob.type }
-        : null;
+  function previewFor(slot: number) {
+    const pending = pendingPhotos[slot];
+    if (pending === undefined) return existingPreviews[slot] ?? null;
+    return pending ? { url: pending.url, type: pending.blob.type } : null;
+  }
 
-  function commitPhoto() {
-    if (pendingPhoto === undefined) return;
-    if (pendingPhoto === null) onRemovePhoto();
-    else onAttachPhoto(pendingPhoto.blob);
+  function commitPhotos() {
+    pendingPhotos.forEach((pending, slot) => {
+      if (pending === undefined) return;
+      if (pending === null) onRemovePhoto(slot);
+      else onAttachPhoto(pending.blob, slot);
+    });
   }
 
   const isMileage = category === 'MILEAGE';
@@ -422,21 +428,44 @@ function EditRow({
         <span>Entered in DTS</span>
       </label>
 
-      <PhotoField
-        idPrefix={`edit-${expense.id}`}
-        preview={preview}
-        onSelect={(blob) =>
-          setPendingPhoto({ blob, url: URL.createObjectURL(blob) })
-        }
-        onRemove={() => setPendingPhoto(null)}
-      />
+      {[0, 1].map((slot) => (
+        <PhotoField
+          key={slot}
+          idPrefix={`edit-${expense.id}`}
+          slot={(slot + 1) as 1 | 2}
+          disabled={slot === 1 && !previewFor(0) && !previewFor(1)}
+          preview={previewFor(slot)}
+          onSelect={(blob) => {
+            const previousUrl = pendingPhotos[slot]?.url;
+            if (previousUrl) {
+              URL.revokeObjectURL(previousUrl);
+              stagedUrls.current.delete(previousUrl);
+            }
+            const url = URL.createObjectURL(blob);
+            stagedUrls.current.add(url);
+            setPendingPhotos((current) => current.map((photo, i) =>
+              i === slot ? { blob, url } : photo,
+            ));
+          }}
+          onRemove={() => {
+            const url = pendingPhotos[slot]?.url;
+            if (url) {
+              URL.revokeObjectURL(url);
+              stagedUrls.current.delete(url);
+            }
+            setPendingPhotos((current) => current.map((photo, i) =>
+              i === slot ? null : photo,
+            ));
+          }}
+        />
+      ))}
 
       <div className="form__actions">
         <button
           type="button"
           className="btn btn--primary"
           onClick={() => {
-            commitPhoto();
+            commitPhotos();
             onSave({
               date,
               category,

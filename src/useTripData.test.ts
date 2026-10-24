@@ -172,6 +172,44 @@ describe('useTripData — receipt photos', () => {
     expect(await (await db.loadPhoto('t1', secondId))!.text()).toBe('second');
   });
 
+  it('stores two attachments independently and replaces only the selected slot', async () => {
+    const { result } = renderHook(() => useTripData('t1'));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    let id = '';
+    act(() => {
+      id = result.current.addExpense(newExpense('two attachments'));
+      result.current.attachPhoto(id, blob('receipt'), 0);
+      result.current.attachPhoto(id, blob('card evidence'), 1);
+    });
+    await waitFor(() => expect(result.current.expenses[0].photoIds.filter(Boolean)).toHaveLength(2));
+    const [receiptId, evidenceId] = result.current.expenses[0].photoIds;
+    expect(await (await db.loadPhoto('t1', receiptId))!.text()).toBe('receipt');
+    expect(await (await db.loadPhoto('t1', evidenceId))!.text()).toBe('card evidence');
+
+    act(() => result.current.attachPhoto(id, blob('updated evidence'), 1));
+    await waitFor(() => expect(db.loadPhoto('t1', evidenceId)).resolves.toBeNull());
+    expect(result.current.expenses[0].photoIds[0]).toBe(receiptId);
+    expect(await (await db.loadPhoto('t1', result.current.expenses[0].photoIds[1]))!.text()).toBe('updated evidence');
+  });
+
+  it('removing the first attachment preserves the second slot and its blob', async () => {
+    const result = await mounted();
+    let id = '';
+    act(() => {
+      id = result.current.addExpense(newExpense('two attachments'));
+      result.current.attachPhoto(id, blob('receipt'), 0);
+      result.current.attachPhoto(id, blob('card evidence'), 1);
+    });
+    await waitFor(() => expect(result.current.expenses[0].photoIds.filter(Boolean)).toHaveLength(2));
+    const [receiptId, evidenceId] = result.current.expenses[0].photoIds;
+
+    act(() => result.current.removePhoto(id, 0));
+    await waitFor(() => expect(result.current.expenses[0].photoIds[0]).toBe(''));
+    expect(result.current.expenses[0].photoIds[1]).toBe(evidenceId);
+    expect(await db.loadPhoto('t1', receiptId)).toBeNull();
+    expect(await (await db.loadPhoto('t1', evidenceId))!.text()).toBe('card evidence');
+  });
+
   it('removePhoto clears the reference and deletes the blob', async () => {
     const result = await mounted();
 

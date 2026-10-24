@@ -197,7 +197,7 @@ Two tables, GBP and USD kept separate throughout:
     comparable against DTS; the calculator is an input convenience only.
 
 **Phase 4 — nice-to-haves**
-12. ~~Receipt photos.~~ **Done** — one photo or PDF per expense, attachable
+12. ~~Receipt photos.~~ **Done** — up to two photos or PDFs per expense, attachable
     both at entry time and later from the List. A photo is downscaled to a
     1600px longest edge (JPEG q0.72) before storage, so a trip's receipts
     don't fill the phone; a PDF (hotel folio, e-ticket confirmation) can't go
@@ -208,13 +208,13 @@ Two tables, GBP and USD kept separate throughout:
     (see CLAUDE.md invariant 13) — the file is text, and embedding them would
     make it enormous, so `photoIds` is zeroed both when a backup is built and
     when one is parsed, and a restore can never produce a dangling reference.
-    Instead they reach the office via a new **receipts `.zip`** export: the
-    same formatted `.xlsx` plus `receipts/receipt-NN.jpg` (or `.pdf`) per
-    attachment, numbered to match a new `Receipt #` / `receipt_no` column in
-    the sheet — so each line can be keyed into DTS with its evidence
-    attached. The model keeps multiple attachments per expense open
-    (`photoIds` is a list, each already has its own key); only the attach
-    behavior and the 1:1 zip numbering enforce the cap.
+    Instead they reach the office via the **receipts `.zip`** export: the
+    same formatted `.xlsx` plus `receipts/receipt-NN.jpg` (or `.pdf`) for the
+    first attachment and `receipt-NN-2.jpg` (or `.pdf`) for the second,
+    numbered to match the row's `Receipt #` / `receipt_no` in the sheet. This
+    keeps a foreign-currency receipt and card conversion evidence together.
+    The existing `photoIds` list and per-file keys support both attachments
+    without a database migration.
 13. Interactive laptop reconciliation via file import / self-contained HTML export.
 
 **Phase 5 — trip archiving & backup nudge**

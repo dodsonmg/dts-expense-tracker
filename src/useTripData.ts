@@ -106,28 +106,38 @@ export function useTripData(tripId: string, reloadEpoch = 0) {
   // twice; the state update itself still uses the updater form so it composes
   // correctly with any other queued update.
   const attachPhoto = useCallback(
-    (expenseId: string, blob: Blob): void => {
+    (expenseId: string, blob: Blob, slot = 0): void => {
       const photoId = newId();
-      // Empty for a row added in this same tick (React hasn't re-rendered yet)
-      // — correct, since a brand-new expense has no previous photo to sweep.
-      const superseded = expenses.find((e) => e.id === expenseId)?.photoIds ?? [];
       setExpenses((prev) =>
-        prev.map((e) => (e.id === expenseId ? { ...e, photoIds: [photoId] } : e)),
+        prev.map((e) => {
+          if (e.id !== expenseId) return e;
+          const photoIds = [...(e.photoIds ?? [])];
+          photoIds[slot] = photoId;
+          return { ...e, photoIds };
+        }),
       );
+      const superseded = expenses.find((e) => e.id === expenseId)?.photoIds?.[slot];
       void savePhoto(tripId, photoId, blob).then(() =>
-        Promise.all(superseded.map((pid) => deletePhoto(tripId, pid))),
+        superseded ? deletePhoto(tripId, superseded) : undefined,
       );
     },
     [expenses, tripId],
   );
 
   const removePhoto = useCallback(
-    (expenseId: string): void => {
-      const removed = expenses.find((e) => e.id === expenseId)?.photoIds ?? [];
+    (expenseId: string, slot = 0): void => {
+      const removed = expenses.find((e) => e.id === expenseId)?.photoIds?.[slot];
       setExpenses((prev) =>
-        prev.map((e) => (e.id === expenseId ? { ...e, photoIds: [] } : e)),
+        prev.map((e) => {
+          if (e.id !== expenseId) return e;
+          const photoIds = (e.photoIds ?? []).map((id, index) =>
+            index === slot ? '' : id,
+          );
+          while (photoIds.at(-1) === '') photoIds.pop();
+          return { ...e, photoIds };
+        }),
       );
-      void Promise.all(removed.map((pid) => deletePhoto(tripId, pid)));
+      if (removed) void deletePhoto(tripId, removed);
     },
     [expenses, tripId],
   );

@@ -40,8 +40,8 @@ export interface Expense {
   // Receipt photo(s). The bytes live under their own `trip:<id>:photo:<photoId>`
   // keys in db.ts, not inline here, so editing any other field doesn't
   // re-serialize photo data (saveExpenses writes the whole array at once).
-  // A list rather than a single nullable id so multiple photos per expense can
-  // be added later without a model migration — the UI caps it at one today.
+  // Up to two device-local attachments. Empty strings preserve a vacant first
+  // slot when the second attachment remains in use.
   // Device-local: always zeroed before a whole-device backup is built and
   // again on restore, so an id can never point at a blob on another device.
   photoIds: string[];
@@ -106,8 +106,8 @@ export function isEntered(e: Expense): boolean {
   return e.entered === true;
 }
 
-// Whether an expense has a receipt photo attached. Defensive against legacy
+// Whether an expense has any attachment. Defensive against legacy
 // rows persisted before this field existed (undefined -> no photo).
 export function hasPhoto(e: Expense): boolean {
-  return (e.photoIds?.length ?? 0) > 0;
+  return e.photoIds?.some(Boolean) ?? false;
 }

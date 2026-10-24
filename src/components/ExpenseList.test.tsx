@@ -420,7 +420,33 @@ describe('ExpenseList — receipt photos', () => {
     expect(onAttachPhoto).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: /^save$/i }));
-    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob));
+    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob), 0);
+  });
+
+  it('EditRow attaches a second card-evidence PDF without replacing the receipt', async () => {
+    const user = userEvent.setup();
+    const onAttachPhoto = vi.fn();
+    render(
+      <ExpenseList
+        {...photoProps}
+        onAttachPhoto={onAttachPhoto}
+        onLoadPhoto={vi.fn().mockResolvedValue(new Blob(['receipt'], { type: 'image/jpeg' }))}
+        expenses={[exp({ id: 'a', photoIds: ['existing-receipt'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('LODGING'));
+    await user.upload(
+      screen.getByTestId('edit-a-photo-input-2'),
+      new File(['card statement'], 'card.pdf', { type: 'application/pdf' }),
+    );
+    await screen.findByText(/attached receipt: pdf/i);
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(onAttachPhoto).toHaveBeenCalledTimes(1);
+    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob), 1);
   });
 
   it('EditRow discards a staged photo on Cancel', async () => {
@@ -472,7 +498,7 @@ describe('ExpenseList — receipt photos', () => {
     expect(onRemovePhoto).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: /^save$/i }));
-    expect(onRemovePhoto).toHaveBeenCalledWith('a');
+    expect(onRemovePhoto).toHaveBeenCalledWith('a', 0);
   });
 
   it('opens a PDF attachment in the lightbox as an <embed>, not an <img>', async () => {
@@ -541,6 +567,26 @@ describe('ExpenseList — receipt photos', () => {
     expect(onAttachPhoto).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: /^save$/i }));
-    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob));
+    expect(onAttachPhoto).toHaveBeenCalledWith('a', expect.any(Blob), 0);
+  });
+
+  it('loads and opens each attachment on its own badge', async () => {
+    const user = userEvent.setup();
+    const onLoadPhoto = vi.fn().mockImplementation(async (id: string) =>
+      new Blob([id], { type: 'application/pdf' }),
+    );
+    render(
+      <ExpenseList
+        {...photoProps}
+        onLoadPhoto={onLoadPhoto}
+        expenses={[exp({ id: 'a', photoIds: ['p1', 'p2'] })]}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /view second attachment/i }));
+    expect(onLoadPhoto).toHaveBeenCalledWith('p2');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 });
