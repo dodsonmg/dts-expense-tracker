@@ -30,6 +30,15 @@ describe('receiptFilename', () => {
       'receipts/receipt-01.pdf',
     );
   });
+
+  it('adds an attachment suffix while keeping both files under one receipt number', () => {
+    expect(receiptFilename(4, 12, 'image/jpeg', 1)).toBe(
+      'receipts/receipt-04.jpg',
+    );
+    expect(receiptFilename(4, 12, 'application/pdf', 2)).toBe(
+      'receipts/receipt-04-2.pdf',
+    );
+  });
 });
 
 describe('buildReceiptZip', () => {
@@ -92,5 +101,19 @@ describe('buildReceiptZip', () => {
     expect(await read.file('receipts/receipt-02.pdf')!.async('string')).toBe(
       'doc',
     );
+  });
+
+  it('bundles two files for one expense under the same receipt number', async () => {
+    const zip = await buildReceiptZip(xlsxBuf(), 'x.xlsx', [
+      { receiptNo: 1, attachmentNo: 1, blob: blob('receipt') },
+      { receiptNo: 1, attachmentNo: 2, blob: blob('card', 'application/pdf') },
+    ]);
+    const read = await JSZip.loadAsync(await zip.arrayBuffer());
+    expect(Object.values(read.files).filter((f) => !f.dir).map((f) => f.name).sort()).toEqual([
+      'receipts/receipt-01-2.pdf',
+      'receipts/receipt-01.jpg',
+      'x.xlsx',
+    ]);
+    expect(await read.file('receipts/receipt-01-2.pdf')!.async('string')).toBe('card');
   });
 });

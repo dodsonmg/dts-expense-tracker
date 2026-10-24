@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { DtsAccountExpected, DtsExpected, Expense, MieSegment } from '../types';
+import { hasPhoto, type DtsAccountExpected, type DtsExpected, type Expense, type MieSegment } from '../types';
 import type { LastBackupInfo } from '../db';
 import { buildCsv, csvFilename } from '../lib/csv';
 import { buildXlsx, xlsxFilename, XLSX_MIME } from '../lib/xlsx';
@@ -49,7 +49,7 @@ export function ExportView({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const empty = expenses.length === 0 && segments.length === 0;
-  const photoCount = expenses.filter((e) => e.photoIds.length > 0).length;
+  const photoCount = expenses.filter(hasPhoto).length;
 
   async function shareBlob(blob: Blob, name: string, type: string) {
     const file = new File([blob], name, { type });
@@ -93,16 +93,19 @@ export function ExportView({
     const buf = await buildXlsx(expenses, segments, expected, accountExpected);
     const report = buildReport(expenses, segments, expected, accountExpected);
 
-    // report.expenses is a 1:1 map over `expenses`, so indexes line up.
+    // report.expenses is a 1:1 map over `expenses`, so indexes line up. Each
+    // attachment keeps the row's receipt number and gets its own suffix.
     const photos: ReceiptPhoto[] = [];
     for (let i = 0; i < expenses.length; i++) {
-      const photoId = expenses[i].photoIds[0];
       const receiptNo = report.expenses[i].receiptNo;
-      if (!photoId || receiptNo == null) continue;
-      const blob = await onLoadPhoto(photoId);
-      // A missing blob shouldn't sink the whole export — the sheet still has
-      // the row, it just won't have evidence attached.
-      if (blob) photos.push({ receiptNo, blob });
+      if (receiptNo == null) continue;
+      for (const [slot, photoId] of expenses[i].photoIds.entries()) {
+        if (!photoId) continue;
+        const blob = await onLoadPhoto(photoId);
+        // A missing blob shouldn't sink the whole export — the sheet still has
+        // the row, it just won't have evidence attached.
+        if (blob) photos.push({ receiptNo, attachmentNo: slot + 1, blob });
+      }
     }
 
     return {

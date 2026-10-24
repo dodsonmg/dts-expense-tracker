@@ -235,14 +235,14 @@ thinking the field is pounds-only. See `HelpView`'s "What does £€¥ mean?" FA
     on the way out, `lib/backup.ts`'s `parseBackup` zeroes them again on the
     way in — so a restored id can never dangle against a blob that only ever
     existed on another device. Blobs are swept when their expense is deleted
-    (`useTripData.deleteExpense`), when replaced (`attachPhoto`), and when the
+    (`useTripData.deleteExpense`), when replaced or removed (`attachPhoto` /
+    `removePhoto`), and when the
     whole trip is deleted (`deleteTripStorage`'s prefix scan). Read "does this
-    row have one" via `hasPhoto` (defensive against legacy rows, like
-    `isEntered`). **One photo per expense today, but that cap is UI/behavior
-    only** — `photoIds` is a list and each photo already has its own key, so
-    going multi needs no model or storage migration; the two places that
-    enforce the cap are `attachPhoto` (replaces rather than appends) and the
-    zip export's 1:1 row-to-file numbering.
+    row have any" via `hasPhoto` (defensive against legacy rows, like
+    `isEntered`). Expenses support up to two attachment slots in `photoIds`;
+    empty slots stay empty so the second document remains associated with its
+    own picker. Both attachments share one spreadsheet receipt number, while
+    the second file gets a `-2` suffix in the ZIP. This needs no migration.
 
 ## Export contract
 
@@ -268,22 +268,19 @@ ExcelJS is dynamically imported; keep it out of any statically-loaded module. Th
 usable as a standalone spreadsheet (it's the reconciliation view at the office,
 where phones are banned).
 
-A third export bundles the two together for the office's evidence step
+A third export bundles the files for the office's evidence step
 (`lib/zip.ts`, `buildReceiptZip`): the same `.xlsx` at the zip root plus
-`receipts/receipt-NN.jpg` (or `.pdf`, for a PDF attachment) per attached
-receipt, where `NN` is the `ReportExpenseRow.receiptNo` printed in the
-sheet's `Receipt #` column — key row N into DTS, attach `receipt-N.jpg`/
-`.pdf`. The extension is derived from the blob's MIME type at zip-build time
-(`receiptFilename`), never stored. `receiptNo` is assigned in `buildReport`
-(sequential across attachment-bearing rows, `null` otherwise) so the sheet
-and the filenames can't disagree, and is **recomputed per export, never
-persisted** — a bundle is internally consistent even though numbering shifts
-between exports. Names are zero-padded to the widest number so they sort
-naturally in Finder. JSZip is dynamically imported like ExcelJS, and the
-archive uses `STORE` (xlsx and a receipt file, JPEG or PDF, are already
-compressed). `ExportView` hides the button entirely unless some expense has
-an attachment, and an attachment whose blob has gone missing is skipped
-rather than failing the export.
+`receipts/receipt-NN.jpg` (or `.pdf`) for the first attachment and
+`receipt-NN-2.jpg` (or `.pdf`) for the second. Both files share the
+`ReportExpenseRow.receiptNo` printed in the sheet's `Receipt #` column. The
+extension comes from the blob's MIME type at zip-build time (`receiptFilename`)
+and is never stored. `receiptNo` is assigned in `buildReport` (sequential
+across expenses with attachments, `null` otherwise) so the sheet and the
+filenames can't disagree, and is **recomputed per export, never persisted**.
+Names are zero-padded to the widest number so they sort naturally in Finder.
+JSZip is dynamically imported like ExcelJS, and the archive uses `STORE`.
+`ExportView` hides the button unless an expense has an attachment, and skips a
+missing blob rather than failing the export.
 
 ## PWA behavior
 
@@ -326,7 +323,7 @@ MVP (this scaffold) is Phase 1. Phases 2–3 in `SPEC.md` are done: DTS
 reconciliation (check-off, mismatch flags, `.xlsx` export), multi-trip +
 backup/restore + MILEAGE calculator + PWA install/offline polish (icon,
 update toast, Help/FAQ tab). Phase 4's **receipt photos** (item 12, invariant
-13) are done: one photo or PDF per expense (photos compressed on capture,
+13) are done: up to two photos or PDFs per expense (photos compressed on capture,
 PDFs size-capped and stored as-is), device-local, with the numbered `.zip`
 bundle for the office. Phase 4's other half — **interactive
 laptop import** (item 13) — is not started; don't pull that work forward

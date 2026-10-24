@@ -130,6 +130,14 @@ describe('buildReport — receiptNo', () => {
     expect(report.expenses.map((e) => e.receiptNo)).toEqual([1, null, 2, 3]);
   });
 
+  it('assigns one receipt number to an expense with two attachments', () => {
+    const report = buildReport(
+      [exp({ id: 'a', photoIds: ['p1', 'p2'] }), exp({ id: 'b', photoIds: ['p3'] })],
+      [],
+    );
+    expect(report.expenses.map((e) => e.receiptNo)).toEqual([1, 2]);
+  });
+
   it('follows input order, so numbers run down the exported sheet', () => {
     const report = buildReport(
       [

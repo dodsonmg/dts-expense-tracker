@@ -70,7 +70,7 @@ const FAQS: { q: string; a: string | string[] }[] = [
   },
   {
     q: 'Can I attach a photo of a receipt? What about a PDF?',
-    a: 'Yes — one photo or PDF per expense, either as you add it on Entry or later by tapping the expense on List. Photos are shrunk before they’re saved so a trip’s worth of receipts doesn’t fill up your phone; PDFs (hotel folios, e-ticket confirmations) are stored as-is, capped at 10 MB. Rows that have one show a small marker on List; tap it to view full-screen.',
+    a: 'Yes — attach up to two photos or PDFs per expense, either as you add it on Entry or later by tapping the expense on List. This is useful for keeping a foreign-currency receipt beside the card statement showing the USD charge and exchange rate. Photos are shrunk before they’re saved; PDFs are stored as-is, capped at 10 MB. Each attachment can be viewed from its own List marker and is included in the receipts ZIP.',
   },
   {
     q: 'Are receipt photos and PDFs included in the backup file?',

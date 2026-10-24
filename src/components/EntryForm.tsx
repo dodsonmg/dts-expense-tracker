@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ITEMIZED_CATEGORIES,
   type Expense,
@@ -13,7 +13,7 @@ interface Props {
   // Returns the new expense's id, so a photo picked before saving can be
   // attached to the row the moment it exists.
   onAdd: (data: Omit<Expense, 'id'>) => string;
-  onAttachPhoto: (expenseId: string, blob: Blob) => void;
+  onAttachPhoto: (expenseId: string, blob: Blob, slot: number) => void;
   onDone: () => void;
 }
 
@@ -40,15 +40,31 @@ export function EntryForm({ onAdd, onAttachPhoto, onDone }: Props) {
   const [payment, setPayment] = useState<Payment>('GTCC');
   const [note, setNote] = useState('');
   // Held locally until save: the expense doesn't exist (and has no id) yet.
-  const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
+  const [photos, setPhotos] = useState<({ blob: Blob; url: string } | null)[]>([
+    null,
+    null,
+  ]);
+  const photoUrls = useRef(new Set<string>());
 
   // Object URLs leak until revoked. Keying the cleanup on `photo` covers every
   // path at once: the previous URL is revoked when one replaces it, when it is
   // cleared on save/remove, and when the form unmounts still holding one.
-  useEffect(() => {
-    if (!photo) return;
-    return () => URL.revokeObjectURL(photo.url);
-  }, [photo]);
+  useEffect(() => () => {
+    for (const url of photoUrls.current) URL.revokeObjectURL(url);
+  }, []);
+
+  function stagePhoto(slot: number, blob: Blob) {
+    const previousUrl = photos[slot]?.url;
+    if (previousUrl) {
+      URL.revokeObjectURL(previousUrl);
+      photoUrls.current.delete(previousUrl);
+    }
+    const url = URL.createObjectURL(blob);
+    photoUrls.current.add(url);
+    setPhotos((current) => current.map((photo, i) =>
+      i === slot ? { blob, url } : photo,
+    ));
+  }
 
   const isMileage = category === 'MILEAGE';
   const useCalculator = isMileage && !mileageManual;
@@ -75,16 +91,20 @@ export function EntryForm({ onAdd, onAttachPhoto, onDone }: Props) {
       entered: false, // new expenses haven't been keyed into DTS yet
       miles: useCalculator ? milesNum : null,
       rate: useCalculator ? rateNum : null,
-      photoIds: [], // attached below, now that the row has an id
+      photoIds: [], // attachments are added below, now that the row has an id
     });
-    if (photo) onAttachPhoto(id, photo.blob);
+    photos.forEach((photo, slot) => {
+      if (photo) onAttachPhoto(id, photo.blob, slot);
+    });
+    for (const url of photoUrls.current) URL.revokeObjectURL(url);
+    photoUrls.current.clear();
     setGbp('');
     setUsd('');
     setMiles('');
     setNote('');
     // Photo is per-expense, so it clears like the amounts — unlike
     // date/category/payment, which persist for the next row.
-    setPhoto(null);
+    setPhotos([null, null]);
     if (thenDone) onDone();
   }
 
@@ -227,14 +247,26 @@ export function EntryForm({ onAdd, onAttachPhoto, onDone }: Props) {
         />
       </label>
 
-      <PhotoField
-        idPrefix="entry"
-        preview={photo ? { url: photo.url, type: photo.blob.type } : null}
-        onSelect={(blob) =>
-          setPhoto({ blob, url: URL.createObjectURL(blob) })
-        }
-        onRemove={() => setPhoto(null)}
-      />
+      {photos.map((photo, slot) => (
+        <PhotoField
+          key={slot}
+          idPrefix="entry"
+          slot={(slot + 1) as 1 | 2}
+          disabled={slot === 1 && !photos[0]}
+          preview={photo ? { url: photo.url, type: photo.blob.type } : null}
+          onSelect={(blob) => stagePhoto(slot, blob)}
+          onRemove={() => {
+            const url = photos[slot]?.url;
+            if (url) {
+              URL.revokeObjectURL(url);
+              photoUrls.current.delete(url);
+            }
+            setPhotos((current) => current.map((item, i) =>
+              i === slot ? null : item,
+            ));
+          }}
+        />
+      ))}
 
       <div className="form__actions">
         <button

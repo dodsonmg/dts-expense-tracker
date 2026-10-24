@@ -35,15 +35,14 @@ product spec.
   top and raw rows behind, plus a plain **CSV** (`usd_incomplete` column).
   Shared via the iOS share sheet (Mail) or downloaded; both usable as
   standalone spreadsheets.
-- **Receipt photos and PDFs** — attach one photo or PDF per expense, either
-  as you add it or later from the List; a photo is downscaled on capture so a
-  trip's receipts stay small, a PDF (hotel folio, e-ticket confirmation) is
-  stored as-is, capped at 10 MB. Tap the **Photo** marker on a row to view it
-  full-screen. For the office, a **receipts `.zip`** bundles the `.xlsx` with
-  one file per receipt, named to match the sheet's **Receipt #** column and
-  its kind — key line *N* into DTS and attach `receipt-0N.jpg` or
-  `receipt-0N.pdf` as evidence. Attachments live on the device only and are
-  the one thing the backup file doesn't carry.
+- **Receipt photos and PDFs** — attach up to two photos or PDFs per expense,
+  such as a foreign-currency receipt plus card evidence showing the USD value
+  and exchange rate, either as you add the expense or later from the List.
+  Photos are downscaled on capture; PDFs are stored as-is, capped at 10 MB.
+  Each **Photo** marker opens its attachment full-screen. For the office, a
+  **receipts `.zip`** bundles the `.xlsx` with files named for the sheet's
+  **Receipt #** (for example, `receipt-01.jpg` and `receipt-01-2.pdf`).
+  Attachments stay on the device and are not included in backups.
 - **Multi-trip** — create/rename/delete trips from the header's trip switcher;
   each trip's expenses/M&IE segments/DTS totals are stored separately, and
   export is always scoped to whichever trip is active. A device always has

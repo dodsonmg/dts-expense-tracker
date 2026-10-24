@@ -23,6 +23,8 @@ interface Props {
   // Distinguishes the file inputs when both forms are on screen, and gives
   // tests a stable handle.
   idPrefix: string;
+  slot: 1 | 2;
+  disabled?: boolean;
 }
 
 // The receipt attachment picker shared by EntryForm and EditRow. Photo
@@ -33,7 +35,14 @@ interface Props {
 // accept="image/*,application/pdf" iOS offers its native sheet with both
 // Take Photo and Photo Library (plus Files for a PDF), whereas `capture`
 // forces the camera and blocks attaching a receipt photographed earlier.
-export function PhotoField({ preview, onSelect, onRemove, idPrefix }: Props) {
+export function PhotoField({
+  preview,
+  onSelect,
+  onRemove,
+  idPrefix,
+  slot,
+  disabled = false,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +78,9 @@ export function PhotoField({ preview, onSelect, onRemove, idPrefix }: Props) {
 
   return (
     <div className="field">
-      <span>Receipt photo</span>
+      <span>
+        {slot === 1 ? 'Receipt' : 'Additional receipt or card evidence'}
+      </span>
 
       {preview && (
         isImageAttachment(preview.type) ? (
@@ -90,10 +101,14 @@ export function PhotoField({ preview, onSelect, onRemove, idPrefix }: Props) {
         <button
           type="button"
           className="btn btn--small"
-          disabled={busy}
+          disabled={busy || disabled}
           onClick={() => inputRef.current?.click()}
         >
-          {preview ? 'Replace photo' : 'Add photo'}
+          {preview
+            ? 'Replace photo'
+            : slot === 1
+              ? 'Add photo'
+              : 'Add second attachment'}
         </button>
         {preview && (
           <button
@@ -109,10 +124,11 @@ export function PhotoField({ preview, onSelect, onRemove, idPrefix }: Props) {
 
       <input
         ref={inputRef}
-        id={`${idPrefix}-photo`}
-        data-testid={`${idPrefix}-photo-input`}
+        id={`${idPrefix}-photo${slot === 2 ? '-2' : ''}`}
+        data-testid={`${idPrefix}-photo-input${slot === 2 ? '-2' : ''}`}
         type="file"
         accept={ATTACHMENT_ACCEPT}
+        disabled={busy || disabled}
         className="visually-hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -122,7 +138,7 @@ export function PhotoField({ preview, onSelect, onRemove, idPrefix }: Props) {
 
       {busy && <p className="muted small">Processing photo…</p>}
       {error && <p className="muted small">{error}</p>}
-      {!preview && !busy && !error && (
+      {slot === 1 && !preview && !busy && !error && (
         <p className="muted small">
           Optional. Stays on this device — photos and PDFs aren&apos;t in the
           backup file, but they do go in the receipts .zip export.

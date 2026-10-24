@@ -15,6 +15,7 @@ export const ZIP_MIME = 'application/zip';
 
 export interface ReceiptPhoto {
   receiptNo: number;
+  attachmentNo?: number;
   blob: Blob;
 }
 
@@ -32,9 +33,11 @@ export function receiptFilename(
   receiptNo: number,
   total: number,
   mimeType: string,
+  attachmentNo = 1,
 ): string {
   const width = Math.max(2, String(total).length);
-  return `receipts/receipt-${String(receiptNo).padStart(width, '0')}.${extensionFor(mimeType)}`;
+  const suffix = attachmentNo === 1 ? '' : `-${attachmentNo}`;
+  return `receipts/receipt-${String(receiptNo).padStart(width, '0')}${suffix}.${extensionFor(mimeType)}`;
 }
 
 export async function buildReceiptZip(
@@ -53,7 +56,10 @@ export async function buildReceiptZip(
   zip.file(xlsxName, new Uint8Array(xlsxBuffer));
   const highest = photos.reduce((max, p) => Math.max(max, p.receiptNo), 0);
   for (const p of photos) {
-    zip.file(receiptFilename(p.receiptNo, highest, p.blob.type), p.blob);
+    zip.file(
+      receiptFilename(p.receiptNo, highest, p.blob.type, p.attachmentNo),
+      p.blob,
+    );
   }
 
   // STORE, not DEFLATE: xlsx is already a zip and a receipt (JPEG or PDF) is

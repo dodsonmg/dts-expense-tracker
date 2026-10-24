@@ -206,7 +206,32 @@ describe('EntryForm — receipt photo', () => {
     await user.click(screen.getByRole('button', { name: /save & add another/i }));
 
     expect(onAttachPhoto).toHaveBeenCalledTimes(1);
-    expect(onAttachPhoto).toHaveBeenCalledWith('new-id', expect.any(Blob));
+    expect(onAttachPhoto).toHaveBeenCalledWith('new-id', expect.any(Blob), 0);
+  });
+
+  it('adds receipt and card evidence to separate attachment slots', async () => {
+    const user = userEvent.setup();
+    const onAttachPhoto = vi.fn();
+    render(
+      <EntryForm
+        onAttachPhoto={onAttachPhoto}
+        onAdd={vi.fn().mockReturnValue('new-id')}
+        onDone={vi.fn()}
+      />,
+    );
+
+    await user.upload(screen.getByTestId('entry-photo-input'), pickFile());
+    await user.upload(
+      screen.getByTestId('entry-photo-input-2'),
+      new File(['statement'], 'card.pdf', { type: 'application/pdf' }),
+    );
+    await screen.findByText(/attached receipt: pdf/i);
+    await user.type(screen.getByLabelText(/USD/i), '20');
+    await user.click(screen.getByRole('button', { name: /save & add another/i }));
+
+    expect(onAttachPhoto).toHaveBeenCalledTimes(2);
+    expect(onAttachPhoto).toHaveBeenNthCalledWith(1, 'new-id', expect.any(Blob), 0);
+    expect(onAttachPhoto).toHaveBeenNthCalledWith(2, 'new-id', expect.any(Blob), 1);
   });
 
   it('does not attach anything when no photo was picked', async () => {
@@ -301,7 +326,7 @@ describe('EntryForm — receipt photo', () => {
     await user.type(screen.getByLabelText(/USD/i), '20');
     await user.click(screen.getByRole('button', { name: /save & add another/i }));
 
-    expect(onAttachPhoto).toHaveBeenCalledWith('new-id', expect.any(Blob));
+    expect(onAttachPhoto).toHaveBeenCalledWith('new-id', expect.any(Blob), 0);
   });
 
   it('shows an error and does not attach when the PDF is over the size cap', async () => {
