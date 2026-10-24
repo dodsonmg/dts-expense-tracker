@@ -42,7 +42,8 @@ product spec.
   Each **Photo** marker opens its attachment full-screen. For the office, a
   **receipts `.zip`** bundles the `.xlsx` with files named for the sheet's
   **Receipt #** (for example, `receipt-01.jpg` and `receipt-01-2.pdf`).
-  Attachments stay on the device and are not included in backups.
+  By explicit user preference, attachments stay on the device and are
+  intentionally excluded from backups.
 - **Multi-trip** — create/rename/delete trips from the header's trip switcher;
   each trip's expenses/M&IE segments/DTS totals are stored separately, and
   export is always scoped to whichever trip is active. A device always has

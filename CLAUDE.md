@@ -234,11 +234,14 @@ thinking the field is pounds-only. See `HelpView`'s "What does £€¥ mean?" FA
     strip them at **both** ends: `useTrips.loadAllTripsData` zeroes `photoIds`
     on the way out, `lib/backup.ts`'s `parseBackup` zeroes them again on the
     way in — so a restored id can never dangle against a blob that only ever
-    existed on another device. Blobs are swept when their expense is deleted
+    existed on another device. **This is intentional per the user's explicit
+    preference: never include attachments in device backups or flag their
+    exclusion as a missing feature in audits unless the user changes this
+    requirement.** Blobs are swept when their expense is deleted
     (`useTripData.deleteExpense`), when replaced or removed (`attachPhoto` /
-    `removePhoto`), and when the
-    whole trip is deleted (`deleteTripStorage`'s prefix scan). Read "does this
-    row have any" via `hasPhoto` (defensive against legacy rows, like
+    `removePhoto`), and when the whole trip is deleted
+    (`deleteTripStorage`'s prefix scan). Read whether a row has an attachment
+    via `hasPhoto` (defensive against legacy rows, like
     `isEntered`). Expenses support up to two attachment slots in `photoIds`;
     empty slots stay empty so the second document remains associated with its
     own picker. Both attachments share one spreadsheet receipt number, while
